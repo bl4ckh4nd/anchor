@@ -44,6 +44,8 @@ export interface NoteSaveQueue {
   newestDraft: () => NoteDraft | null;
   setBaseVersion: (version: number | undefined) => void;
   settled: () => Promise<void>;
+  /** Once settled: whether every edit reached the server, none dropped. */
+  saved: () => Promise<boolean>;
 }
 
 const maxConflictRetries = 3;
@@ -208,6 +210,8 @@ export function createNoteSaveQueue(
   let inFlight: Promise<void> | null = null;
   let conflicts = 0;
   let failures = 0;
+  // A draft was given up on since the last save went through.
+  let dropped = false;
   let busy = false;
   let retryIn = 0;
   let retryTimer: ReturnType<typeof setTimeout> | undefined;
@@ -222,6 +226,7 @@ export function createNoteSaveQueue(
   // A request that never reached an answer is worth repeating; a refusal is not.
   function fail(failure: SaveFailure, draft: NoteDraft): void {
     handlers.onFailed(failure, draft);
+    if (!failure.retryable) dropped = !pending;
     if (!failure.retryable || pending) return;
 
     failures += 1;
@@ -248,6 +253,7 @@ export function createNoteSaveQueue(
           conflicts = 0;
           failures = 0;
           baseVersion = outcome.note.version;
+          dropped = false;
           if (pending && noteDraftsEqual(pending, draft)) pending = null;
           handlers.onSaved(draft, outcome.note);
           return;
@@ -263,6 +269,7 @@ export function createNoteSaveQueue(
         const canRetry = conflicts <= maxConflictRetries;
         const next = handlers.onConflict(outcome.serverNote, draft, canRetry);
         pending = canRetry ? next : null;
+        if (!canRetry) dropped = true;
       })
       .catch(() => {
         fail({ status: "failed", httpStatus: null, retryable: false }, draft);
@@ -310,6 +317,10 @@ export function createNoteSaveQueue(
       while (inFlight) {
         await inFlight;
       }
+    },
+    async saved() {
+      await this.settled();
+      return !pending && !sending && !dropped;
     },
   };
 }

@@ -559,8 +559,7 @@ export function useNoteEditor({
     // The queue has dropped a draft the server turned down.
     if (saveFailure && !saveFailure.retryable) return false;
     live.current.save();
-    await queue.settled();
-    return !queue.newestDraft();
+    return queue.saved();
   };
 
   const flush = useCallback(() => {
