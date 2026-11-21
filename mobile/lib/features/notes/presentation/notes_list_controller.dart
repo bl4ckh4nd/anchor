@@ -84,10 +84,17 @@ VisibleNotes visibleNotes(Ref ref) {
 
   final words = query.trim().toLowerCase();
   final searchText = ref.watch(noteSearchTextProvider);
+  final matchingTagIds = words.isEmpty
+      ? const <String>{}
+      : {
+          for (final tag in ref.watch(tagsControllerProvider).value ?? [])
+            if (tag.name.toLowerCase().contains(words)) tag.id,
+        };
   bool matches(Note note) =>
       words.isEmpty ||
       note.title.toLowerCase().contains(words) ||
-      searchText.of(note).contains(words);
+      searchText.of(note).contains(words) ||
+      note.tagIds.any(matchingTagIds.contains);
   final comparator = noteComparator(options);
   final visible = [
     for (final note in notes)

@@ -8,6 +8,8 @@ import {
   usePreferencesStore,
   type ViewMode,
 } from "@/features/preferences";
+import { useTagMap } from "@/features/tags/hooks";
+import type { TagLabel } from "@/features/tags/types";
 import { useFlip } from "@/lib/use-flip";
 import { deltaToFullPlainText } from "../quill";
 import { compareNotes } from "../sort";
@@ -29,14 +31,19 @@ function searchTextOf(note: Note) {
 
 const NO_NOTES: Note[] = [];
 
-function findAndSort(
+export function findAndSort(
   notes: Note[],
   term: string,
   sortBy: SortBy,
   sortOrder: SortOrder,
+  tagMap: ReadonlyMap<string, TagLabel>,
 ) {
+  const hasTag = (note: Note) =>
+    note.tagIds?.some((id) =>
+      tagMap.get(id)?.name.toLowerCase().includes(term),
+    );
   const found = term
-    ? notes.filter((note) => searchTextOf(note).includes(term))
+    ? notes.filter((note) => searchTextOf(note).includes(term) || hasTag(note))
     : notes;
   return [...found].sort(compareNotes(sortBy, sortOrder));
 }
@@ -62,6 +69,7 @@ export function useNoteList(
   const boardRef = React.useRef<HTMLDivElement>(null);
   const searchRef = React.useRef<HTMLInputElement>(null);
   const flip = useFlip(boardRef);
+  const tagMap = useTagMap();
   const urlQuery = useSearchParams().get(QUERY_PARAM) ?? "";
   const [query, setQueryValue] = React.useState(urlQuery);
   const queryInUrl = React.useRef(urlQuery);
@@ -73,15 +81,15 @@ export function useNoteList(
 
   const term = searchedQuery.trim().toLowerCase();
   const visible = React.useMemo(
-    () => findAndSort(notes, term, sortBy, sortOrder),
-    [notes, term, sortBy, sortOrder],
+    () => findAndSort(notes, term, sortBy, sortOrder, tagMap),
+    [notes, term, sortBy, sortOrder, tagMap],
   );
   const isSearching = term !== "";
   const hasArchived = !!archived && (isSearching || !archived.isSearchOnly);
   const archivedNotes = (hasArchived && archived?.notes) || NO_NOTES;
   const archivedVisible = React.useMemo(
-    () => findAndSort(archivedNotes, term, sortBy, sortOrder),
-    [archivedNotes, term, sortBy, sortOrder],
+    () => findAndSort(archivedNotes, term, sortBy, sortOrder, tagMap),
+    [archivedNotes, term, sortBy, sortOrder, tagMap],
   );
   const isArchivedFoldable = hasArchived && !!archived?.canFold && !isSearching;
   const isArchivedOpen =
