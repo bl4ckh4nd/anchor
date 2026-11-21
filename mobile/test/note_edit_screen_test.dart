@@ -21,7 +21,9 @@ import 'package:anchor/features/notes/presentation/editor/rich_text_editor.dart'
 import 'package:anchor/features/notes/presentation/editor/slash_hint.dart';
 import 'package:anchor/features/notes/presentation/editor/slash_menu.dart';
 import 'package:anchor/features/notes/presentation/note_edit_screen.dart';
+import 'package:anchor/features/notes/presentation/widgets/note_attachments_strip.dart';
 import 'package:anchor/features/notes/presentation/widgets/note_chips.dart';
+import 'package:anchor/features/notes/presentation/widgets/note_header.dart';
 import 'package:anchor/features/notes/presentation/widgets/read_only_bottom_bar.dart';
 import 'package:anchor/features/reminders/data/notification_gateway.dart';
 import 'package:anchor/features/reminders/domain/reminder_schedule.dart';
@@ -2517,6 +2519,38 @@ void main() {
 
       verify(() => notesRepo.deleteForever(['copy-1'])).called(1);
       expect(location(tester), '/note/n1');
+      await drainSnackbar(tester);
+    });
+
+    testWidgets('the note can’t be edited while the copy is being made, and '
+        'can again if it fails', (tester) async {
+      final copying = Completer<String>();
+      when(() => copier.copy('n1')).thenAnswer((_) => copying.future);
+      await pumpScreen(tester, note: original, copier: copier);
+      await tester.pumpAndSettle();
+      List<bool> canEdit() => [
+        !tester.widget<TextField>(titleField).readOnly,
+        tester.widget<RichTextEditor>(find.byType(RichTextEditor)).canEdit,
+        !tester.widget<NoteTagRow>(find.byType(NoteTagRow)).readOnly,
+        tester
+            .widget<NoteAttachmentsStrip>(find.byType(NoteAttachmentsStrip))
+            .canEdit,
+      ];
+      expect(canEdit(), everyElement(isTrue));
+
+      await makeCopy(tester);
+
+      expect(canEdit(), everyElement(isFalse));
+      expect(barButton('More'), findsNothing);
+      expect(find.bySemanticsLabel('Making a copy…'), findsOneWidget);
+
+      copying.completeError(Exception('offline'));
+      await tester.pump();
+      await tester.pump();
+
+      expect(canEdit(), everyElement(isTrue));
+      expect(barButton('More'), findsOneWidget);
+      expect(find.textContaining('Couldn’t make a copy.'), findsOneWidget);
       await drainSnackbar(tester);
     });
   });

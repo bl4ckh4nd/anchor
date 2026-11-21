@@ -21,6 +21,7 @@ class NoteBar extends StatelessWidget {
     required this.isUnsynced,
     required this.isTrashed,
     required this.isReadOnly,
+    this.isCopying = false,
     required this.onBack,
     required this.onHistory,
     required this.onBackground,
@@ -34,6 +35,9 @@ class NoteBar extends StatelessWidget {
   final bool isUnsynced;
   final bool isTrashed;
   final bool isReadOnly;
+
+  /// Shows progress in place of the ⋯ button while a copy is being made.
+  final bool isCopying;
   final VoidCallback onBack;
   final VoidCallback onHistory;
   final VoidCallback onBackground;
@@ -63,14 +67,25 @@ class NoteBar extends StatelessWidget {
           BarButton(
             icon: LucideIcons.palette,
             label: context.l10n.noteBackground,
-            onPressed: onBackground,
+            onPressed: isCopying ? null : onBackground,
           ),
         _ReminderButton(reminder: reminder, onPressed: onReminder),
-        BarButton(
-          icon: LucideIcons.ellipsis,
-          label: context.l10n.commonMore,
-          onPressed: onMore,
-        ),
+        if (isCopying)
+          Semantics(
+            label: context.l10n.noteCopying,
+            liveRegion: true,
+            excludeSemantics: true,
+            child: SizedBox.square(
+              dimension: BarButtonSize.regular.box,
+              child: Center(child: Spinner(size: BarButtonSize.regular.icon)),
+            ),
+          )
+        else
+          BarButton(
+            icon: LucideIcons.ellipsis,
+            label: context.l10n.commonMore,
+            onPressed: onMore,
+          ),
       ],
     ];
     return PageBar(

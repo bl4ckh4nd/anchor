@@ -3565,6 +3565,10 @@
   "@noteCopyArriving": {
     "description": "Toast when the server made the copy but it has not reached this phone yet."
   },
+  "noteCopying": "Making a copy…",
+  "@noteCopying": {
+    "description": "Screen reader label of the spinner in the note’s top bar while a copy is being made; the note can’t be edited meanwhile."
+  },
   "reminderRemoved": "Reminder removed",
   "@reminderRemoved": {
     "description": "Toast after a note’s reminder was removed, with an Undo button."

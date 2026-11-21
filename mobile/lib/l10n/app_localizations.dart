@@ -4090,6 +4090,12 @@ abstract class AppLocalizations {
   /// **'Copy made. It appears once the app syncs.'**
   String get noteCopyArriving;
 
+  /// Screen reader label of the spinner in the note’s top bar while a copy is being made; the note can’t be edited meanwhile.
+  ///
+  /// In en, this message translates to:
+  /// **'Making a copy…'**
+  String get noteCopying;
+
   /// Toast after a note’s reminder was removed, with an Undo button.
   ///
   /// In en, this message translates to:

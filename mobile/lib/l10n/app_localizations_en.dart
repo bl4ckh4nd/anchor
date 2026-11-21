@@ -2666,6 +2666,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noteCopyArriving => 'Copy made. It appears once the app syncs.';
 
   @override
+  String get noteCopying => 'Making a copy…';
+
+  @override
   String get reminderRemoved => 'Reminder removed';
 
   @override
