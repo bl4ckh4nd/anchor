@@ -1,3 +1,5 @@
+import { QUERY_PARAM } from "./url-with-query";
+
 /** Where a note dragged out of the columns list can be dropped. */
 export type DropTarget =
   | { kind: "tag"; tagId: string }
@@ -24,8 +26,11 @@ export function draggedNoteIds(
   return shownIds.filter((id) => picked.has(id));
 }
 
-export function noteHref(id: string, tagId: string | null) {
-  return tagId
-    ? `/notes/${id}?tagId=${encodeURIComponent(tagId)}`
-    : `/notes/${id}`;
+/** The search goes along, so the note can show its matches. */
+export function noteHref(id: string, tagId: string | null, query = "") {
+  const params = [
+    tagId && `tagId=${encodeURIComponent(tagId)}`,
+    query.trim() && `${QUERY_PARAM}=${encodeURIComponent(query)}`,
+  ].filter(Boolean);
+  return params.length ? `/notes/${id}?${params.join("&")}` : `/notes/${id}`;
 }

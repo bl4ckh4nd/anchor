@@ -415,7 +415,7 @@ export function NotesView({
           picked={list.picked}
           onPick={onPick}
           onShare={setSharingNote}
-          noteHref={isColumns ? (id) => noteHref(id, tagId) : undefined}
+          noteHref={(id) => noteHref(id, isColumns ? tagId : null, list.query)}
           openId={openId}
           onDropOut={isColumns ? dropNotes : undefined}
           reorder={ordering.reorder}
