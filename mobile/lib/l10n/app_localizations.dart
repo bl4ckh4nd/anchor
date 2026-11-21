@@ -2674,6 +2674,12 @@ abstract class AppLocalizations {
   /// **'Unarchive'**
   String get actionUnarchive;
 
+  /// In the open note's menu: makes a new note of your own with the same title, text, background, tags and attachments.
+  ///
+  /// In en, this message translates to:
+  /// **'Make a copy'**
+  String get actionMakeCopy;
+
   /// Verb: moves notes to the trash or deletes a picture. Short: fits the selection bar.
   ///
   /// In en, this message translates to:
@@ -4059,6 +4065,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This note is no longer available'**
   String get noteGone;
+
+  /// Toast once a copy of the note was made and opened, with an Undo button that deletes the copy and goes back to the original.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy made. You’re editing the copy.'**
+  String get noteCopyMade;
+
+  /// Toast when Make a copy is chosen while the phone is offline; copies are made on the server.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect to the internet to make a copy.'**
+  String get noteCopyOffline;
+
+  /// Error toast when the copy could not be made, for example because the note's latest changes have not reached the server yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t make a copy. Try again once your changes have synced.'**
+  String get noteCopyFailed;
+
+  /// Toast when the server made the copy but it has not reached this phone yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy made. It appears once the app syncs.'**
+  String get noteCopyArriving;
 
   /// Toast after a note’s reminder was removed, with an Undo button.
   ///

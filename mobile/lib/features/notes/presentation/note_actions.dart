@@ -23,6 +23,7 @@ enum NoteAction {
   deleteChecked,
   archive,
   unarchive,
+  copy,
   trash,
   restore,
   deleteForever;
@@ -64,6 +65,7 @@ enum NoteAction {
       icon: LucideIcons.archiveRestore,
       label: l10n.actionUnarchive,
     ),
+    NoteAction.copy => (icon: LucideIcons.copy, label: l10n.actionMakeCopy),
     NoteAction.trash => (icon: LucideIcons.trash2, label: l10n.actionDelete),
     NoteAction.restore => (
       icon: LucideIcons.rotateCcw,
@@ -86,8 +88,8 @@ class NoteActions {
 
   NotesRepository get _repo => ref.read(notesRepositoryProvider);
 
-  /// Share, history and the checklist actions do nothing here; an open note
-  /// handles them itself.
+  /// Share, history, copy and the checklist actions do nothing here; an open
+  /// note handles them itself.
   Future<void> run(
     NoteAction action,
     List<Note> notes, {
@@ -113,6 +115,7 @@ class NoteActions {
         await deleteForever(notes, beforeChange: beforeChange);
       case NoteAction.share ||
           NoteAction.history ||
+          NoteAction.copy ||
           NoteAction.uncheckAll ||
           NoteAction.deleteChecked:
         break;

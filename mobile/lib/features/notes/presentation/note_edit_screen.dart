@@ -25,6 +25,7 @@ import '../../tags/domain/tag.dart';
 import '../../tags/presentation/tags_controller.dart';
 import '../../tags/presentation/widgets/tag_sheets.dart';
 import '../data/repository/note_attachments_repository.dart';
+import '../data/repository/note_copier.dart';
 import '../data/repository/note_shares_repository.dart';
 import '../data/repository/notes_repository.dart';
 import '../domain/note.dart';
@@ -328,6 +329,8 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen>
         );
       case NoteAction.unarchive:
         await actions.unarchive([note]);
+      case NoteAction.copy:
+        await _makeCopy(note);
       case NoteAction.trash:
         await actions.trash(
           [note],
@@ -337,6 +340,51 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen>
       case NoteAction.tag || NoteAction.restore || NoteAction.deleteForever:
         break;
     }
+  }
+
+  /// Copies are made on the server; the copy opens in place of this note.
+  Future<void> _makeCopy(Note note) async {
+    final l10n = context.l10n;
+    if (!ref.read(isOnlineProvider)) {
+      AppSnackbar.show(context, l10n.noteCopyOffline, kind: SnackbarKind.info);
+      return;
+    }
+    final router = GoRouter.of(context);
+    final repo = ref.read(notesRepositoryProvider);
+    await _draft.saveNow();
+    final String copyId;
+    try {
+      copyId = await ref.read(noteCopierProvider).copy(note.id);
+    } catch (_) {
+      if (mounted) {
+        AppSnackbar.show(
+          context,
+          l10n.noteCopyFailed,
+          kind: SnackbarKind.error,
+        );
+      }
+      return;
+    }
+    final copy = await repo.getNote(copyId);
+    if (!mounted) return;
+    if (copy == null) {
+      AppSnackbar.show(context, l10n.noteCopyArriving);
+      return;
+    }
+    final copyPath = AppRoutes.note(copyId);
+    AppSnackbar.show(
+      context,
+      l10n.noteCopyMade,
+      kind: SnackbarKind.success,
+      actionLabel: l10n.commonUndo,
+      onAction: () async {
+        if (router.state.uri.path == copyPath) {
+          router.go(AppRoutes.note(note.id), extra: note);
+        }
+        await repo.deleteForever([copyId]);
+      },
+    );
+    router.go(copyPath, extra: copy);
   }
 
   void _offerUndo(UndoableEdit? edit, String Function(int count) message) {
