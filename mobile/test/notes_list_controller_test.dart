@@ -4,6 +4,7 @@ import 'package:anchor/features/notes/presentation/notes_controller.dart';
 import 'package:anchor/features/notes/presentation/notes_list_controller.dart';
 import 'package:anchor/features/notes/presentation/notes_view_options.dart';
 import 'package:anchor/features/reminders/data/notification_gateway.dart';
+import 'package:anchor/features/tags/domain/tag.dart';
 import 'package:anchor/features/tags/presentation/tags_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -22,6 +23,15 @@ class _Tag extends SelectedTagFilter {
 
   @override
   String? build() => tagId;
+}
+
+class _TagList extends TagsController {
+  _TagList(this.tags);
+
+  final List<Tag> tags;
+
+  @override
+  Stream<List<Tag>> build() => Stream.value(tags);
 }
 
 class _OpenTags extends OpenArchivedTags {
@@ -66,9 +76,11 @@ void main() {
     FakeGateway? gateway,
     String? tagId,
     Set<String> openTags = const {},
+    List<Tag> tags = const [],
   }) {
     final container = ProviderContainer(
       overrides: [
+        tagsControllerProvider.overrideWith(() => _TagList(tags)),
         selectedTagFilterProvider.overrideWith(() => _Tag(tagId)),
         openArchivedTagsProvider.overrideWith(() => _OpenTags(openTags)),
         notesProvider.overrideWith((ref) => Stream.value(active ?? notes)),
@@ -130,6 +142,25 @@ void main() {
     container.read(searchQueryProvider.notifier).set('ideas');
     shown = container.read(visibleNotesProvider);
     expect(shown.notes.map((n) => n.id), ['n3']);
+  });
+
+  test('a search finds notes by the name of their tags', () async {
+    final tagged = [
+      notes[0].copyWith(tagIds: ['t1']),
+      notes[1],
+      notes[2].copyWith(tagIds: ['t2']),
+    ];
+    final container = containerWith(
+      active: tagged,
+      tags: const [
+        Tag(id: 't1', name: 'Shopping'),
+        Tag(id: 't2', name: 'Work'),
+      ],
+    );
+    container.read(searchQueryProvider.notifier).set('SHOP');
+    final shown = await visibleIn(container);
+
+    expect(shown.notes.map((n) => n.id), ['n1']);
   });
 
   test('Archive shows its notes in one group', () async {
