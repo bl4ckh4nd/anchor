@@ -293,10 +293,9 @@ class RichTextEditorState extends State<RichTextEditor>
   }
 
   void _findSearchMatches() {
-    final matches = findMatches(
-      _controller.document.toPlainText(),
-      widget.searchQuery,
-    );
+    final matches = widget.searchQuery.trim().isEmpty
+        ? const <TextRange>[]
+        : findMatches(_controller.document.toPlainText(), widget.searchQuery);
     final changed = matches.length != _searchMatches.length;
     _searchMatches = matches;
     if (changed) widget.onSearchMatches?.call(matches.length);
