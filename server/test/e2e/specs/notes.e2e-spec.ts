@@ -1,4 +1,14 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import * as fs from 'fs';
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
+import { NoteAttachmentsService } from 'src/notes/services/note-attachments.service';
 import { Actor, createE2EApp, E2EApp, entryFor } from '../support';
 
 /**
@@ -289,6 +299,56 @@ describe('notes', () => {
       await user.http.post(`/api/notes/${note.id}/duplicate`).expect(404);
 
       expect(await ctx.prisma.note.count()).toBe(1);
+    });
+
+    describe('when access ends while the files are being copied', () => {
+      const duringFileCopy = (action: () => Promise<unknown>) => {
+        const attachments = ctx.get<NoteAttachmentsService>(
+          NoteAttachmentsService,
+        );
+        const spy = vi
+          .spyOn(attachments, 'copyFiles')
+          .mockImplementation(async (...args) => {
+            spy.mockRestore();
+            const rows = await attachments.copyFiles(...args);
+            await action();
+            return rows;
+          });
+      };
+
+      const expectNoCopy = async (noteId: string, foldersBefore: string[]) => {
+        expect((await ctx.prisma.note.findMany()).map((n) => n.id)).toEqual([
+          noteId,
+        ]);
+        expect(fs.readdirSync(ctx.storage.attachmentsDir).sort()).toEqual(
+          foldersBefore,
+        );
+      };
+      const folders = () => fs.readdirSync(ctx.storage.attachmentsDir).sort();
+
+      it('refuses the copy once the share is revoked', async () => {
+        const friend = await ctx.registerUser('Friend');
+        const note = await user.notes.create({ title: 'shared' });
+        await user.attachments.upload(note.id, 'photo.png');
+        const share = await user.shares.grant(note.id, friend.id, 'viewer');
+        const before = folders();
+        duringFileCopy(() => user.shares.revoke(note.id, share.id));
+
+        await friend.http.post(`/api/notes/${note.id}/duplicate`).expect(404);
+
+        await expectNoCopy(note.id, before);
+      });
+
+      it('refuses the copy once the note is in the trash', async () => {
+        const note = await user.notes.create({ title: 'binned' });
+        await user.attachments.upload(note.id, 'photo.png');
+        const before = folders();
+        duringFileCopy(() => user.notes.trash(note.id));
+
+        await user.http.post(`/api/notes/${note.id}/duplicate`).expect(404);
+
+        await expectNoCopy(note.id, before);
+      });
     });
   });
 });

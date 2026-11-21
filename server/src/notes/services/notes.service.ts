@@ -151,6 +151,9 @@ export class NotesService {
         userId,
       );
       await this.prisma.$transaction(async (tx) => {
+        if (!(await this.lockReadableNote(tx, userId, id))) {
+          throw new NotFoundException(ERROR_MESSAGES.NOTE_NOT_FOUND);
+        }
         await tx.note.create({
           data: {
             id: copyId,
@@ -173,6 +176,25 @@ export class NotesService {
       throw error;
     }
     return this.findOne(userId, copyId);
+  }
+
+  // Re-checks under row locks that [userId] may still read the active note,
+  // so a revoke or trash running alongside waits for this transaction, or
+  // this one sees its result.
+  private async lockReadableNote(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    id: string,
+  ): Promise<boolean> {
+    const [note] = await tx.$queryRaw<{ userId: string; state: NoteState }[]>`
+      SELECT "userId", state FROM "Note" WHERE id = ${id} FOR SHARE`;
+    if (note?.state !== NoteState.active) return false;
+    if (note.userId === userId) return true;
+    const [share] = await tx.$queryRaw<{ isDeleted: boolean }[]>`
+      SELECT "isDeleted" FROM "NoteShare"
+      WHERE "noteId" = ${id} AND "sharedWithUserId" = ${userId}
+      FOR SHARE`;
+    return share?.isDeleted === false;
   }
 
   private async findCreatedNote(userId: string, id: string) {
