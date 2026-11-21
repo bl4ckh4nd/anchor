@@ -39,6 +39,8 @@ void main() {
       const text = 'İstanbul bias, İzmir bias';
       expect(found(text, 'bias'), ['bias', 'bias']);
       expect(found(text, 'İZMIR'), ['İzmir']);
+      // A match inside such a character, as the list finds it, covers it.
+      expect(found('İ', 'i'), ['İ']);
     },
   );
 

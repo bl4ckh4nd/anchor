@@ -3,8 +3,10 @@ export function findMatches(text: string, query: string): [number, number][] {
   const term = query.trim().toLowerCase();
   if (!term || term.includes("\n")) return [];
   let lower = text.toLowerCase();
-  // Each index of `lower` to the index in `text` it came from.
-  let at: number[] | null = null;
+  // Each index of `lower` to the bounds of the character in `text` it came
+  // from, so a match inside a character that lower-cases to several still
+  // covers it.
+  let at: [number, number][] | null = null;
   if (lower.length !== text.length) {
     lower = "";
     at = [];
@@ -12,10 +14,9 @@ export function findMatches(text: string, query: string): [number, number][] {
       const char = String.fromCodePoint(text.codePointAt(i) as number);
       const lowerChar = char.toLowerCase();
       lower += lowerChar;
-      for (let k = 0; k < lowerChar.length; k++) at.push(i);
+      for (let k = 0; k < lowerChar.length; k++) at.push([i, i + char.length]);
       i += char.length;
     }
-    at.push(text.length);
   }
   const matches: [number, number][] = [];
   for (
@@ -23,10 +24,9 @@ export function findMatches(text: string, query: string): [number, number][] {
     i !== -1;
     i = lower.indexOf(term, i + term.length)
   ) {
-    const [start, end] = at
-      ? [at[i], at[i + term.length]]
-      : [i, i + term.length];
-    if (end > start) matches.push([start, end]);
+    matches.push(
+      at ? [at[i][0], at[i + term.length - 1][1]] : [i, i + term.length],
+    );
   }
   return matches;
 }

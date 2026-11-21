@@ -37,5 +37,7 @@ describe("findMatches", () => {
     expect(found(text, "bias")).toEqual(["bias", "bias"]);
     expect(found(text, "izmir")).toEqual([]);
     expect(found(text, "i̇zmir")).toEqual(["İzmir"]);
+    // A match inside such a character, as the list finds it, covers it.
+    expect(found("İ", "i")).toEqual(["İ"]);
   });
 });

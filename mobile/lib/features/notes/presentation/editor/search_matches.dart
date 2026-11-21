@@ -7,8 +7,10 @@ List<TextRange> findMatches(String text, String query) {
   final term = query.trim().toLowerCase();
   if (term.isEmpty || term.contains('\n')) return const [];
   var lower = text.toLowerCase();
-  // Each index of `lower` to the index in `text` it came from.
-  List<int>? at;
+  // Each index of `lower` to the bounds of the character in `text` it came
+  // from, so a match inside a character that lower-cases to several still
+  // covers it.
+  List<(int, int)>? at;
   if (lower.length != text.length) {
     final buffer = StringBuffer();
     at = [];
@@ -18,11 +20,10 @@ List<TextRange> findMatches(String text, String query) {
       final lowerChar = char.toLowerCase();
       buffer.write(lowerChar);
       for (var k = 0; k < lowerChar.length; k++) {
-        at.add(i);
+        at.add((i, i + char.length));
       }
       i += char.length;
     }
-    at.add(text.length);
     lower = buffer.toString();
   }
   final matches = <TextRange>[];
@@ -31,9 +32,11 @@ List<TextRange> findMatches(String text, String query) {
     i != -1;
     i = lower.indexOf(term, i + term.length)
   ) {
-    final start = at?[i] ?? i;
-    final end = at?[i + term.length] ?? i + term.length;
-    if (end > start) matches.add(TextRange(start: start, end: end));
+    matches.add(
+      at == null
+          ? TextRange(start: i, end: i + term.length)
+          : TextRange(start: at[i].$1, end: at[i + term.length - 1].$2),
+    );
   }
   return matches;
 }
