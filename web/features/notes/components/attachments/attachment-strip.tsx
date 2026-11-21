@@ -45,6 +45,36 @@ const usePendingDeletes = create<{
     }),
 }));
 
+/** Per note: deletions still showing their Undo toast, and uploads under way. */
+const deletesWaiting = new Map<string, Set<string>>();
+const attachmentWork = new Map<string, Set<Promise<unknown>>>();
+
+function inSet<T>(map: Map<string, Set<T>>, noteId: string) {
+  const set = map.get(noteId) ?? new Set<T>();
+  map.set(noteId, set);
+  return set;
+}
+
+function track<T>(noteId: string, work: Promise<T>) {
+  const set = inSet(attachmentWork, noteId);
+  set.add(work);
+  const done = () => {
+    set.delete(work);
+    if (!set.size && attachmentWork.get(noteId) === set)
+      attachmentWork.delete(noteId);
+  };
+  work.then(done, done);
+  return work;
+}
+
+/** Sends the note's waiting file deletions now, then waits for them and its uploads. */
+export async function attachmentsSettled(noteId: string) {
+  for (const toastId of [...(deletesWaiting.get(noteId) ?? [])])
+    toast.dismiss(toastId);
+  while (attachmentWork.get(noteId)?.size)
+    await Promise.allSettled(attachmentWork.get(noteId) ?? []);
+}
+
 interface Drag {
   id: string;
   kind: Kind;
@@ -281,14 +311,17 @@ export function AttachmentStrip({
         return;
       }
       const tried: { upload: Upload; isAdded: boolean }[] = [];
-      await eachLimited(
-        fresh,
-        async (upload) => {
-          const outcome = await send(id, upload);
-          if (outcome !== "canceled")
-            tried.push({ upload, isAdded: outcome === "added" });
-        },
-        3,
+      await track(
+        id,
+        eachLimited(
+          fresh,
+          async (upload) => {
+            const outcome = await send(id, upload);
+            if (outcome !== "canceled")
+              tried.push({ upload, isAdded: outcome === "added" });
+          },
+          3,
+        ),
       );
       queryClient.invalidateQueries({ queryKey: ["notes"] });
 
@@ -321,7 +354,7 @@ export function AttachmentStrip({
     try {
       const id = await ensureNoteId();
       if (!id) return patch(upload.key, { failed: true });
-      const outcome = await send(id, again);
+      const outcome = await track(id, send(id, again));
       if (outcome === "canceled") return;
       if (outcome === "added")
         queryClient.invalidateQueries({ queryKey: ["notes"] });
@@ -351,13 +384,19 @@ export function AttachmentStrip({
     flip.prepare();
     mark(attachment.id, true);
     const name = shortFileName(attachment.originalFilename);
+    const toastId = `delete-${attachment.id}`;
+    const waiting = inSet(deletesWaiting, id);
+    waiting.add(toastId);
     toast.success(`${name} deleted`, {
+      id: toastId,
       undo: () => {
+        waiting.delete(toastId);
         flip.prepare();
         mark(attachment.id, false);
       },
       onClose: () => {
-        deleteAttachment(id, attachment.id).then(
+        waiting.delete(toastId);
+        track(id, deleteAttachment(id, attachment.id)).then(
           () => {
             queryClient.setQueryData<NoteAttachment[]>(
               ["attachments", id],

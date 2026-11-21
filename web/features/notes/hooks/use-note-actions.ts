@@ -13,6 +13,7 @@ import {
   restoreNote,
   unarchiveNote,
 } from "../api";
+import { attachmentsSettled } from "../components/attachments";
 import { savesSettled } from "../save-queues";
 import type { Note } from "../types";
 import { useRefreshNotes } from "./use-refresh-notes";
@@ -100,6 +101,8 @@ export function useNoteActions({
     mutationFn: async () => {
       // A copy of text the server hasn't got yet would lose it.
       if (!(await flushEdits())) throw new Error("Edits not saved");
+      // Files deleted or added on screen must be so on the server too.
+      await attachmentsSettled(noteId);
       return duplicateNote(noteId);
     },
     onSuccess: (copy) => {
