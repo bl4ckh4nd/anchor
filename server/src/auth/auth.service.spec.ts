@@ -12,6 +12,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { SettingsService } from '../settings/settings.service';
 import { OidcConfigService } from './oidc/oidc-config.service';
 import { UserDeletionService } from '../users/user-deletion.service';
+import { TwoFactorService } from './two-factor/two-factor.service';
 import { REFRESH_TOKEN_REUSE_WINDOW_MS } from './constants/auth.constants';
 
 /**
@@ -198,6 +199,10 @@ describe('AuthService', () => {
   const userDeletionService = {
     deleteUser: vi.fn(() => Promise.resolve()),
   };
+  const twoFactor = {
+    gateForPasswordLogin: vi.fn().mockResolvedValue(undefined),
+    mustEnrollNewUser: vi.fn().mockResolvedValue(false),
+  } as unknown as TwoFactorService;
 
   const storageConfig = {
     root: '/data',
@@ -217,6 +222,7 @@ describe('AuthService', () => {
       settingsService,
       oidcConfigService,
       userDeletionService as unknown as UserDeletionService,
+      twoFactor,
       storageConfig,
     );
     vi.clearAllMocks();

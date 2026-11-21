@@ -6,6 +6,7 @@ import {
   KeyRound,
   Lock,
   PencilLine,
+  ShieldCheck,
   SunMoon,
   Trash2,
   UserRound,
@@ -13,6 +14,7 @@ import {
 import * as React from "react";
 import { glidePill, prefersReducedMotion } from "@/lib/motion";
 import { onUserScroll } from "@/lib/user-scroll";
+import { useSecurity } from "../hooks/use-security";
 
 const SECTIONS = [
   { id: "profile", label: "Profile", icon: UserRound },
@@ -21,11 +23,17 @@ const SECTIONS = [
   { id: "token", label: "API token", icon: KeyRound },
   { id: "data", label: "Import and export", icon: HardDriveDownload },
   { id: "password", label: "Password", icon: Lock },
+  { id: "security", label: "Security", icon: ShieldCheck, isNew: true },
   { id: "delete-account", label: "Delete account", icon: Trash2 },
   { id: "about", label: "About", icon: Info },
 ] as const;
 
 export function SettingsNav() {
+  const { isHidden } = useSecurity();
+  const sections = React.useMemo(
+    () => SECTIONS.filter((section) => section.id !== "security" || !isHidden),
+    [isHidden],
+  );
   const [activeSection, setActiveSection] = React.useState<string>(
     SECTIONS[0].id,
   );
@@ -52,8 +60,8 @@ export function SettingsNav() {
     const onScroll = () => {
       if (isClickedSectionHeldRef.current) return;
       const scrollerTop = scroller.getBoundingClientRect().top;
-      let inView: string = SECTIONS[0].id;
-      for (const section of SECTIONS) {
+      let inView: string = sections[0].id;
+      for (const section of sections) {
         const sectionEl = document.getElementById(`set-${section.id}`);
         if (
           sectionEl &&
@@ -65,7 +73,7 @@ export function SettingsNav() {
         scroller.scrollTop + scroller.clientHeight >=
         scroller.scrollHeight - 4
       )
-        inView = SECTIONS[SECTIONS.length - 1].id;
+        inView = sections[sections.length - 1].id;
       highlight(inView);
     };
     scroller.addEventListener("scroll", onScroll, { passive: true });
@@ -80,7 +88,7 @@ export function SettingsNav() {
       scroller.removeEventListener("scroll", onScroll);
       stopWatching();
     };
-  }, [highlight]);
+  }, [highlight, sections]);
 
   return (
     <nav
@@ -88,7 +96,7 @@ export function SettingsNav() {
       aria-label="Settings sections"
       className="sticky top-20 isolate grid gap-px max-md:static max-md:-mx-gutter-phone max-md:flex max-md:gap-1.5 max-md:overflow-x-auto max-md:px-gutter-phone max-md:scrollbar-none"
     >
-      {SECTIONS.map((section) => (
+      {sections.map((section) => (
         <a
           key={section.id}
           href={`#set-${section.id}`}
@@ -107,6 +115,11 @@ export function SettingsNav() {
         >
           <section.icon aria-hidden />
           {section.label}
+          {"isNew" in section && (
+            <span className="ml-auto rounded-pill bg-warn px-1.5 py-px font-bold text-[10px] text-warn-foreground uppercase tracking-[.04em] max-md:hidden">
+              New
+            </span>
+          )}
         </a>
       ))}
     </nav>
