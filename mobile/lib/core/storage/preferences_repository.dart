@@ -108,6 +108,18 @@ class PreferencesRepository {
     await _storage.write(key: StorageKeys.displayDensity, value: density);
   }
 
+  Future<bool> getShowCardPictures() async {
+    final value = await _storage.read(key: StorageKeys.showCardPictures);
+    return value != 'false';
+  }
+
+  Future<void> setShowCardPictures(bool value) async {
+    await _storage.write(
+      key: StorageKeys.showCardPictures,
+      value: value.toString(),
+    );
+  }
+
   Future<bool> getAllowSelfSignedCert() async {
     final value = await _storage.read(key: StorageKeys.allowSelfSignedCert);
     return value == 'true';

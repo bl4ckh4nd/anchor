@@ -1270,6 +1270,18 @@ abstract class AppLocalizations {
   /// **'Compact fits more notes on the screen.'**
   String get settingsDensityHelp;
 
+  /// Switch in Settings, Appearance: whether note cards in the notes list show the note's pictures.
+  ///
+  /// In en, this message translates to:
+  /// **'Pictures on note cards'**
+  String get settingsCardPictures;
+
+  /// Under the Pictures on note cards switch. The pictures stay in the note; only the card hides them.
+  ///
+  /// In en, this message translates to:
+  /// **'Show a note’s first pictures at the top of its card.'**
+  String get settingsCardPicturesHelp;
+
   /// Screen reader name of the group of light, dark and automatic theme choices.
   ///
   /// In en, this message translates to:
@@ -2955,6 +2967,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 picture} other{{count} pictures}}'**
   String cardPictures(int count);
+
+  /// Read out by screen readers with a note card that shows no pictures: how many files the note has.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 attachment} other{{count} attachments}}'**
+  String cardAttachments(int count);
 
   /// Under a note’s title, or spoken on a card: who shared the note with the person.
   ///

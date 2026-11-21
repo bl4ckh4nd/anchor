@@ -707,6 +707,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsDensityHelp => 'Compact fits more notes on the screen.';
 
   @override
+  String get settingsCardPictures => 'Pictures on note cards';
+
+  @override
+  String get settingsCardPicturesHelp =>
+      'Show a note’s first pictures at the top of its card.';
+
+  @override
   String get settingsTheme => 'Theme';
 
   @override
@@ -1981,6 +1988,17 @@ class AppLocalizationsEn extends AppLocalizations {
       locale: localeName,
       other: '$count pictures',
       one: '1 picture',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cardAttachments(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count attachments',
+      one: '1 attachment',
     );
     return '$_temp0';
   }

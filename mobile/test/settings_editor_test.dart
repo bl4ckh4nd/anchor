@@ -16,6 +16,7 @@ import 'package:anchor/features/auth/presentation/oidc_config_provider.dart';
 import 'package:anchor/features/server/data/server_info_provider.dart';
 import 'package:anchor/features/settings/presentation/editor_preferences_controller.dart';
 import 'package:anchor/features/settings/presentation/settings_screen.dart';
+import 'package:anchor/features/settings/presentation/theme_preferences_controller.dart';
 import 'package:anchor/features/sync/data/sync_compatibility.dart';
 import 'package:anchor/l10n/app_localizations.dart';
 import 'package:flutter/foundation.dart';
@@ -206,7 +207,13 @@ void main() {
     expect(dividersIn('Font'), findsNWidgets(2));
     await tester.drag(find.byType(Scrollable).first, const Offset(0, 400));
     await tester.pumpAndSettle();
-    expect(dividersIn('Density'), findsNothing);
+    // Only the switch has a line above it; the theme picker has none below.
+    final line = tester.getRect(dividersIn('Density'));
+    expect(line.top, greaterThan(tester.getRect(find.text('Density')).bottom));
+    expect(
+      line.bottom,
+      lessThan(tester.getRect(find.text('Pictures on note cards')).top),
+    );
   });
 
   testWidgets('picking a font and a size saves them on this phone and '
@@ -271,6 +278,23 @@ void main() {
     await tester.pump();
     await tester.pump();
     expect(styleOf(tester, preview).fontSize, closeTo(16.5 * 0.88, 0.001));
+  });
+
+  testWidgets('pictures on note cards stay on until turned off, and the '
+      'choice is saved on this phone', (tester) async {
+    final container = await pumpSettings(tester);
+    final repository = container.read(preferencesRepositoryProvider);
+    final row = find.text('Pictures on note cards');
+    await tester.scrollUntilVisible(row, -200);
+
+    expect(await repository.getShowCardPictures(), isTrue);
+    expect(container.read(cardPicturesControllerProvider), isTrue);
+
+    await tester.tap(row);
+    await tester.pumpAndSettle();
+
+    expect(container.read(cardPicturesControllerProvider), isFalse);
+    expect(await repository.getShowCardPictures(), isFalse);
   });
 
   testWidgets('Account has Delete account, under Sign out', (tester) async {

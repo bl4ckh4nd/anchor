@@ -30,6 +30,7 @@ class NoteCardContent extends StatelessWidget {
     required this.layout,
     required this.status,
     required this.isSelected,
+    required this.previews,
     this.check,
   });
 
@@ -40,13 +41,15 @@ class NoteCardContent extends StatelessWidget {
   final String? status;
   final bool isSelected;
 
+  /// The pictures the card shows; none when cards hide them.
+  final List<NoteImagePreview> previews;
+
   final Widget? check;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.anchor;
     final list = layout == CardLayout.list;
-    final previews = note.imagePreviewData;
     final radius = BorderRadius.circular(AnchorTokens.radiusCard);
     final density = context.density;
     // The first line keeps clear of the selection check over it.
@@ -86,6 +89,7 @@ class NoteCardContent extends StatelessWidget {
               status: status,
               showDate: true,
               tags: tags,
+              files: previews.isEmpty ? note.attachmentCount : 0,
             )
           else ...[
             if (tags.isNotEmpty) _Tags(tags: tags, appearance: appearance),
@@ -94,6 +98,7 @@ class NoteCardContent extends StatelessWidget {
               appearance: appearance,
               status: status,
               showDate: false,
+              files: previews.isEmpty ? note.attachmentCount : 0,
             ),
           ],
         ],
@@ -239,6 +244,7 @@ class _Footer extends StatelessWidget {
     required this.status,
     required this.showDate,
     this.tags = const [],
+    this.files = 0,
   });
 
   final Note note;
@@ -246,6 +252,9 @@ class _Footer extends StatelessWidget {
   final String? status;
   final bool showDate;
   final List<Tag> tags;
+
+  /// Files to count with a paperclip, when no pictures show them.
+  final int files;
 
   @override
   Widget build(BuildContext context) {
@@ -301,6 +310,24 @@ class _Footer extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ),
+      if (files > 0)
+        ExcludeSemantics(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                LucideIcons.paperclip,
+                size: 13, // off-scale: card footer
+                color: muted,
+              ),
+              const SizedBox(width: 3),
+              Text(
+                '$files',
+                style: style.copyWith(fontWeight: FontWeight.w500),
+              ),
+            ],
           ),
         ),
     ];
