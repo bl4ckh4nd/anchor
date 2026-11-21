@@ -56,6 +56,8 @@ function findRanges(root: HTMLElement, query: string) {
     text = "";
   };
   for (const line of linesOf(root)) {
+    // Folded checked items aren't on screen: nothing to show or step to.
+    if (!line.getBoundingClientRect().height) continue;
     const walker = document.createTreeWalker(
       line,
       NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
@@ -113,7 +115,12 @@ export function useSearchMatches(
   query: string,
 ) {
   const [stoppedFor, setStoppedFor] = React.useState<string | null>(null);
-  const [ranges, setRanges] = React.useState<Range[]>([]);
+  // Kept with the search they were found for, so a new search starts empty.
+  const [found, setFound] = React.useState<{ query: string; ranges: Range[] }>({
+    query: "",
+    ranges: [],
+  });
+  const ranges = found.query === query ? found.ranges : [];
   const [current, setCurrent] = React.useState(0);
   const scrolledFor = React.useRef<string | null>(null);
   const isOn = query.trim() !== "" && stoppedFor !== query && isSupported();
@@ -122,23 +129,27 @@ export function useSearchMatches(
     const el = root.current;
     setCurrent(0);
     if (!isOn || !el) {
-      setRanges([]);
+      setFound({ query: "", ranges: [] });
       return;
     }
     let frame = 0;
     const scan = () => {
       cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => setRanges(findRanges(el, query)));
+      frame = requestAnimationFrame(() =>
+        setFound({ query, ranges: findRanges(el, query) }),
+      );
     };
     scan();
     // The text arrives after the page, and can change from elsewhere.
+    // Folding checked items rewrites a style sheet in the editor.
+    const watched = ".ql-editor, [data-find], style";
     const observer = new MutationObserver((records) => {
       if (
         records.some((record) =>
           (record.target instanceof Element
             ? record.target
             : record.target.parentElement
-          )?.closest(".ql-editor, [data-find]"),
+          )?.closest(watched),
         )
       )
         scan();
