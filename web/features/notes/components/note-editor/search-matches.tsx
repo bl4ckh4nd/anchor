@@ -33,24 +33,10 @@ function linesOf(root: HTMLElement) {
 
 function findRanges(root: HTMLElement, query: string) {
   const ranges: Range[] = [];
-  for (const line of linesOf(root)) {
-    const walker = document.createTreeWalker(line, NodeFilter.SHOW_TEXT, {
-      // A read-only editor is all contenteditable="false"; embeds in it too.
-      acceptNode: (node) => {
-        const ui = node.parentElement?.closest(
-          '.ql-ui, [contenteditable="false"]',
-        );
-        return ui && line.contains(ui)
-          ? NodeFilter.FILTER_REJECT
-          : NodeFilter.FILTER_ACCEPT;
-      },
-    });
-    const nodes: { node: Text; start: number }[] = [];
-    let text = "";
-    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-      nodes.push({ node: node as Text, start: text.length });
-      text += (node as Text).data;
-    }
+  let nodes: { node: Text; start: number }[] = [];
+  let text = "";
+  // Marks the text gathered so far; an embed or a line ends it.
+  const flush = () => {
     const at = (offset: number, isEnd: boolean) => {
       let i = nodes.length - 1;
       while (
@@ -66,6 +52,37 @@ function findRanges(root: HTMLElement, query: string) {
       range.setEnd(...at(end, true));
       ranges.push(range);
     }
+    nodes = [];
+    text = "";
+  };
+  for (const line of linesOf(root)) {
+    const walker = document.createTreeWalker(
+      line,
+      NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
+      {
+        acceptNode: (node) => {
+          if (node.nodeType === Node.TEXT_NODE) return NodeFilter.FILTER_ACCEPT;
+          const el = node as Element;
+          // Pictures and Quill's own controls aren't text: a match stops at
+          // them. A read-only editor is all contenteditable="false", so only
+          // ones inside the line count.
+          if (
+            el.matches(
+              'img, video, iframe, br, .ql-ui, [contenteditable="false"]',
+            )
+          ) {
+            flush();
+            return NodeFilter.FILTER_REJECT;
+          }
+          return NodeFilter.FILTER_SKIP;
+        },
+      },
+    );
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      nodes.push({ node: node as Text, start: text.length });
+      text += (node as Text).data;
+    }
+    flush();
   }
   return ranges;
 }
@@ -216,13 +233,6 @@ export function SearchMatchesBar({
           e.preventDefault();
           matches.stop();
           onEscape();
-        } else if (
-          e.key === "Enter" &&
-          !(e.target as Element).matches('[aria-label="Stop highlighting"]')
-        ) {
-          e.preventDefault();
-          if (e.shiftKey) matches.previous();
-          else matches.next();
         }
       }}
     >
