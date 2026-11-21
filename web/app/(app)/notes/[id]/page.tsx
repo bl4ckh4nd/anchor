@@ -89,6 +89,7 @@ function NoteEditor({
     note,
     isOwner,
     save,
+    flushEdits: editor.flushEdits,
     refetchNote: editor.refetchNote,
     setIsArchived: editor.setIsArchived,
   });
@@ -269,6 +270,7 @@ function NoteEditor({
             onHistory={openHistory}
             onArchive={actions.archive}
             onUnarchive={actions.unarchive}
+            onCopy={actions.makeCopy}
             onTrash={actions.trash}
             checklist={readOnly ? undefined : checklist}
           />

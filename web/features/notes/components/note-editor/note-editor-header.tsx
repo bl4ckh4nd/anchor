@@ -9,6 +9,7 @@ import {
   Check,
   CircleAlert,
   CloudOff,
+  Copy,
   Ellipsis,
   History,
   ListRestart,
@@ -72,6 +73,7 @@ interface NoteEditorHeaderProps {
   onHistory: () => void;
   onArchive: () => void;
   onUnarchive: () => void;
+  onCopy: () => void;
   onTrash: () => void;
   /** Only for a note you can edit. */
   checklist?: ChecklistActions;
@@ -240,6 +242,10 @@ export function NoteEditorHeader(props: NoteEditorHeaderProps) {
                     Archive
                   </DropdownMenuItem>
                 )}
+                <DropdownMenuItem onSelect={props.onCopy}>
+                  <Copy />
+                  Make a copy
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 {props.checklist && <ChecklistMenuItems {...props.checklist} />}
                 <DropdownMenuItem tone="danger" onSelect={props.onTrash}>

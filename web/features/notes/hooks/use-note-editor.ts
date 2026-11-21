@@ -554,9 +554,11 @@ export function useNoteEditor({
     pushDraft();
   };
 
+  /** Resolves with whether every edit reached the server. */
   const flushEdits = async () => {
     live.current.save();
     await queue.settled();
+    return !queue.newestDraft();
   };
 
   const flush = useCallback(() => {

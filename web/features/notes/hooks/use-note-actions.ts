@@ -8,10 +8,12 @@ import { canGoBackInApp } from "@/lib/app-history";
 import {
   archiveNote,
   deleteNote,
+  duplicateNote,
   permanentDeleteNote,
   restoreNote,
   unarchiveNote,
 } from "../api";
+import { savesSettled } from "../save-queues";
 import type { Note } from "../types";
 import { useRefreshNotes } from "./use-refresh-notes";
 
@@ -20,6 +22,7 @@ export function useNoteActions({
   note,
   isOwner,
   save,
+  flushEdits,
   refetchNote,
   setIsArchived,
 }: {
@@ -27,6 +30,7 @@ export function useNoteActions({
   note: Note | null;
   isOwner: boolean;
   save: () => void;
+  flushEdits: () => Promise<boolean>;
   refetchNote: () => Promise<unknown>;
   setIsArchived: (isArchived: boolean) => void;
 }) {
@@ -89,6 +93,32 @@ export function useNoteActions({
     onError: () =>
       toast.error("Couldn’t unarchive note", {
         retry: () => unarchiveMutation.mutate(),
+      }),
+  });
+
+  const copyMutation = useMutation({
+    mutationFn: async () => {
+      // A copy of text the server hasn't got yet would lose it.
+      if (!(await flushEdits())) throw new Error("Edits not saved");
+      return duplicateNote(noteId);
+    },
+    onSuccess: (copy) => {
+      const copyPath = `/notes/${copy.id}`;
+      refreshLists();
+      router.push(copyPath);
+      toast.success("Copy made. You’re editing the copy.", {
+        undo: async () => {
+          if (window.location.pathname === copyPath) router.back();
+          await savesSettled(copy.id);
+          await permanentDeleteNote(copy.id).then(refreshLists, () =>
+            toast.error("Couldn’t undo that"),
+          );
+        },
+      });
+    },
+    onError: () =>
+      toast.error("Couldn’t make a copy", {
+        retry: () => copyMutation.mutate(),
       }),
   });
 
@@ -156,6 +186,7 @@ export function useNoteActions({
     goBack,
     archive: () => archiveMutation.mutate(),
     unarchive: () => unarchiveMutation.mutate(),
+    makeCopy: () => copyMutation.mutate(),
     trash: () =>
       isOwner ? trashMutation.mutate() : setConfirmLeaveShare(true),
     leaveShare: () => trashMutation.mutate(),
