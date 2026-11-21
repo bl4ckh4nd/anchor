@@ -556,6 +556,8 @@ export function useNoteEditor({
 
   /** Resolves with whether every edit reached the server. */
   const flushEdits = async () => {
+    // The queue has dropped a draft the server turned down.
+    if (saveFailure && !saveFailure.retryable) return false;
     live.current.save();
     await queue.settled();
     return !queue.newestDraft();

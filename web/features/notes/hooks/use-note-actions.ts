@@ -186,7 +186,9 @@ export function useNoteActions({
     goBack,
     archive: () => archiveMutation.mutate(),
     unarchive: () => unarchiveMutation.mutate(),
-    makeCopy: () => copyMutation.mutate(),
+    makeCopy: () => {
+      if (!copyMutation.isPending) copyMutation.mutate();
+    },
     trash: () =>
       isOwner ? trashMutation.mutate() : setConfirmLeaveShare(true),
     leaveShare: () => trashMutation.mutate(),
