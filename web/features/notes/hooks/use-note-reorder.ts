@@ -10,7 +10,10 @@ import {
   stepInOrder,
   withPositions,
 } from "@/features/ordering";
-import { REORDER_MUTATION_KEY } from "@/features/sync/use-sync";
+import {
+  REORDER_MUTATION_KEY,
+  refreshAfterReorder,
+} from "@/features/sync/use-sync";
 import { bulkPinNotes, getNotes, setNotePositions } from "../api";
 import type { BoardDrop, BoardReorder } from "../components/board-drag";
 import { compareNotes } from "../sort";
@@ -86,12 +89,7 @@ export function useNoteReorder({
           : "Couldn’t save the new order",
       );
     },
-    onSettled: () => {
-      // Pulls wait while orders are on their way, so the last one refreshes.
-      if (queryClient.isMutating({ mutationKey: REORDER_MUTATION_KEY }) <= 1) {
-        void queryClient.invalidateQueries({ queryKey: ["notes"] });
-      }
-    },
+    onSettled: () => refreshAfterReorder(queryClient),
   });
 
   const allNotes = React.useCallback(async (): Promise<Note[]> => {

@@ -43,7 +43,7 @@ import {
   withPositions,
 } from "@/features/ordering";
 import { type TagOrder, usePreferencesStore } from "@/features/preferences";
-import { REORDER_MUTATION_KEY } from "@/features/sync";
+import { REORDER_MUTATION_KEY, refreshAfterReorder } from "@/features/sync";
 import { setTagPositions, type Tag, useTagOrder } from "@/features/tags";
 import { suppressNextClick } from "@/lib/suppress-click";
 import { useHoldRing } from "@/lib/use-hold-ring";
@@ -93,10 +93,7 @@ export function SortableTags({
     onError: () => {
       toast.error("Couldn’t save the tag order");
     },
-    onSettled: () => {
-      if (queryClient.isMutating({ mutationKey: REORDER_MUTATION_KEY }) <= 1)
-        void queryClient.invalidateQueries({ queryKey: ["tags"] });
-    },
+    onSettled: () => refreshAfterReorder(queryClient),
   });
 
   const write = (changes: Pick<PositionChange, "id" | "position">[]) => {

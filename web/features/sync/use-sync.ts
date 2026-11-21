@@ -1,6 +1,6 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
+import { type QueryClient, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { getAccessToken, useAuthStore } from "@/features/auth";
 import { refreshAccessToken } from "@/lib/api/client";
@@ -18,6 +18,14 @@ const reorderedQueryKeys = new Set(["notes", "tags"]);
 
 /** Note and tag orders share it; see useNoteReorder and the sidebar. */
 export const REORDER_MUTATION_KEY = ["reorder"];
+
+/** Call when a reorder settles: pulls skipped while orders were on their way. */
+export function refreshAfterReorder(queryClient: QueryClient): void {
+  // The settling reorder still counts as mutating.
+  if (queryClient.isMutating({ mutationKey: REORDER_MUTATION_KEY }) > 1) return;
+  for (const key of reorderedQueryKeys)
+    void queryClient.invalidateQueries({ queryKey: [key] });
+}
 
 const pushDebounceMs = 300;
 
