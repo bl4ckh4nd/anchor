@@ -2,9 +2,17 @@
 
 import { useTheme } from "next-themes";
 import { RadioCards } from "@/components/ui/radio-cards";
+import { Switch } from "@/components/ui/switch";
+import { usePreferencesStore } from "@/features/preferences";
 import { switchTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
-import { Row, RowText, Section } from "./settings-blocks";
+import {
+  Row,
+  RowText,
+  SaveStatus,
+  Section,
+  useSaveStatus,
+} from "./settings-blocks";
 
 function ThemeThumb({ theme }: { theme: "light" | "dark" }) {
   return (
@@ -26,6 +34,8 @@ function ThemeThumb({ theme }: { theme: "light" | "dark" }) {
 
 export function AppearanceSection() {
   const { theme = "system", setTheme } = useTheme();
+  const { notes, setNotesPreference } = usePreferencesStore();
+  const [saveStatus, setSaveStatus] = useSaveStatus();
   const frameClass =
     "relative mb-2 h-16 overflow-hidden rounded-md shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--border)_80%,transparent)]";
   return (
@@ -74,6 +84,21 @@ export function AppearanceSection() {
               ),
             },
           ]}
+        />
+      </Row>
+      <Row>
+        <RowText
+          title={<label htmlFor="card-pictures">Pictures on note cards</label>}
+          text="Show a note’s first pictures at the top of its card."
+          saved={<SaveStatus state={saveStatus} />}
+        />
+        <Switch
+          id="card-pictures"
+          checked={notes.showCardPictures}
+          onCheckedChange={(on) => {
+            setNotesPreference("showCardPictures", on);
+            setSaveStatus("saved");
+          }}
         />
       </Row>
     </Section>

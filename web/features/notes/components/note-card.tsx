@@ -7,6 +7,7 @@ import * as React from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tip } from "@/components/ui/tooltip";
+import { usePreferencesStore } from "@/features/preferences";
 import { MoreChip, TagChip } from "@/features/tags/components/tag-chip";
 import { useTagOrder } from "@/features/tags/hooks";
 import type { TagLabel } from "@/features/tags/types";
@@ -126,7 +127,8 @@ export const NoteCard = React.memo(function NoteCard({
   const title = hasTitle(note.title) ? note.title : "";
   const label = title || "Untitled";
   const isList = layout === "list";
-  const pictureIds = note.imagePreviewIds ?? [];
+  const showPictures = usePreferencesStore((s) => s.notes.showCardPictures);
+  const pictureIds = showPictures ? (note.imagePreviewIds ?? []) : [];
   const attachmentCount = note.attachmentCount ?? 0;
   const loadPictures = useNearScreen(cardRef, pictureIds.length > 0);
   const tagOrder = useTagOrder();
