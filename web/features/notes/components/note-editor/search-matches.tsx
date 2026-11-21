@@ -171,15 +171,8 @@ export function useSearchMatches(
     index,
     next: () => go(1),
     previous: () => go(-1),
+    /** On Esc or ×, and on any edit to the title or text. */
     stop: () => setStoppedFor(query),
-    /**
-     * Typing ends it. A React handler, so the edit and this render together:
-     * a render of its own would put the title's old value back.
-     */
-    onInput: (e: React.FormEvent) => {
-      if (isOn && (e.target as Element).closest(".ql-editor, textarea"))
-        setStoppedFor(query);
-    },
     /** Looking for matches: the title's text box gets a copy to mark. */
     isOn,
     hasMatches: ranges.length > 0,
@@ -190,21 +183,18 @@ export type SearchMatches = ReturnType<typeof useSearchMatches>;
 
 export function SearchMatchesBar({
   matches,
-  onStopped,
+  onEscape,
 }: {
   matches: SearchMatches;
-  onStopped: () => void;
+  /** Closed from the keyboard: focus goes back to the text. */
+  onEscape: () => void;
 }) {
   const roving = useRovingFocus<HTMLDivElement>();
   if (!matches.hasMatches) return null;
-  const stop = () => {
-    matches.stop();
-    onStopped();
-  };
   const button = (
     label: string,
     icon: React.ReactNode,
-    onClick: () => void,
+    onClick: (e: React.MouseEvent) => void,
   ) => (
     <Tip label={label}>
       <button type="button" aria-label={label} onClick={onClick}>
@@ -223,10 +213,15 @@ export function SearchMatchesBar({
         roving.onKeyDown(e);
         if (e.key === "Escape") {
           e.preventDefault();
-          stop();
-        } else if (e.key === "Enter" && e.shiftKey) {
+          matches.stop();
+          onEscape();
+        } else if (
+          e.key === "Enter" &&
+          !(e.target as Element).matches('[aria-label="Stop highlighting"]')
+        ) {
           e.preventDefault();
-          matches.previous();
+          if (e.shiftKey) matches.previous();
+          else matches.next();
         }
       }}
     >
@@ -236,7 +231,11 @@ export function SearchMatchesBar({
       </span>
       {button("Previous match", <ArrowUp aria-hidden />, matches.previous)}
       {button("Next match", <ArrowDown aria-hidden />, matches.next)}
-      {button("Stop highlighting", <X aria-hidden />, stop)}
+      {button("Stop highlighting", <X aria-hidden />, (e) => {
+        matches.stop();
+        // From the keyboard; a tap must not raise a phone's keyboard.
+        if (e.detail === 0) onEscape();
+      })}
     </div>
   );
 }

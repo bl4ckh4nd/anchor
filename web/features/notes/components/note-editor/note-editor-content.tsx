@@ -115,10 +115,19 @@ export function NoteEditorContent(props: NoteEditorContentProps) {
     root,
     useSearchParams().get(QUERY_PARAM) ?? "",
   );
+  // Any edit ends the search marks; this render goes with the edit's own.
+  const onTitleChange = (title: string) => {
+    searchMatches.stop();
+    props.onTitleChange(title);
+  };
+  const onContentChange = (content: string) => {
+    searchMatches.stop();
+    props.onContentChange(content);
+  };
   const titleLine = useTitleLine(
     props.titleInputRef,
     props.contentEditorRef,
-    props.onTitleChange,
+    onTitleChange,
   );
 
   const starters = !props.readOnly &&
@@ -161,7 +170,7 @@ export function NoteEditorContent(props: NoteEditorContentProps) {
     );
 
   return (
-    <div ref={root} className="note-in" onInput={searchMatches.onInput}>
+    <div ref={root} className="note-in">
       {props.readOnlyBar}
       {props.readOnly ? (
         <h1 className="n-title" data-find={props.title ? "" : undefined}>
@@ -171,7 +180,7 @@ export function NoteEditorContent(props: NoteEditorContentProps) {
         <TitleField
           ref={props.titleInputRef}
           value={props.title}
-          onChange={(title) => props.onTitleChange(withoutLineBreaks(title))}
+          onChange={(title) => onTitleChange(withoutLineBreaks(title))}
           onKeyDown={titleLine.onKeyDown}
           onPaste={titleLine.onPaste}
           hasMarks={searchMatches.isOn}
@@ -279,7 +288,7 @@ export function NoteEditorContent(props: NoteEditorContentProps) {
         <RichTextEditor
           ref={props.contentEditorRef}
           value={props.content}
-          onChange={props.onContentChange}
+          onChange={onContentChange}
           placeholder={props.isNew ? "Start writing" : "Write something"}
           readOnly={props.readOnly}
           onAddAttachment={
@@ -288,7 +297,7 @@ export function NoteEditorContent(props: NoteEditorContentProps) {
           above={
             <SearchMatchesBar
               matches={searchMatches}
-              onStopped={() =>
+              onEscape={() =>
                 root.current
                   ?.querySelector<HTMLElement>(
                     '.ql-editor[contenteditable="true"]',
