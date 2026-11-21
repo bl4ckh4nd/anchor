@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:anchor/app/app_bootstrap.dart';
 import 'package:anchor/core/network/server_config_provider.dart';
 import 'package:anchor/core/theme/app_theme.dart';
 import 'package:anchor/core/widgets/check_circle.dart';
@@ -34,12 +35,17 @@ void main() {
     bool isSelecting = false,
     List<Tag> tags = const [],
     FutureOr<String?> Function()? picture,
+    CardLayout layout = CardLayout.masonry,
+    bool showCardPictures = true,
   }) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           tagsControllerProvider.overrideWith(TagsController.new),
           serverUrlProvider.overrideWithValue('https://example.test'),
+          appBootstrapProvider.overrideWithValue(
+            AppBootstrap(showCardPictures: showCardPictures),
+          ),
           if (picture != null)
             attachmentFileProvider.overrideWith((ref, key) => picture()),
         ],
@@ -53,6 +59,7 @@ void main() {
                   note: note,
                   tags: tags,
                   isSelecting: isSelecting,
+                  layout: layout,
                 ),
               ),
             ),
@@ -182,6 +189,30 @@ void main() {
 
     expect(find.byType(Shimmer), findsNothing);
     expect(find.byIcon(LucideIcons.imageOff), findsOneWidget);
+  });
+
+  testWidgets('with pictures on cards turned off, no layout shows them', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    for (final layout in CardLayout.values) {
+      await pumpCard(
+        tester,
+        withPicture(),
+        160,
+        picture: () => Completer<String?>().future,
+        layout: layout,
+        showCardPictures: false,
+      );
+
+      expect(find.byType(Shimmer), findsNothing, reason: '$layout');
+      expect(find.byType(Image), findsNothing, reason: '$layout');
+      expect(
+        tester.getSemantics(find.byType(NoteCard)).label,
+        isNot(contains('picture')),
+      );
+    }
+    semantics.dispose();
   });
 
   testWidgets('no reminder still lays out', (tester) async {

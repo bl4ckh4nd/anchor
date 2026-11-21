@@ -707,6 +707,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsDensityHelp => 'Compact fits more notes on the screen.';
 
   @override
+  String get settingsCardPictures => 'Pictures on note cards';
+
+  @override
+  String get settingsCardPicturesHelp =>
+      'Show a note’s first pictures at the top of its card.';
+
+  @override
   String get settingsTheme => 'Theme';
 
   @override

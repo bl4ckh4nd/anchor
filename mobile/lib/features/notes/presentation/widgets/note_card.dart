@@ -2,12 +2,14 @@ import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/motion/springs.dart';
 import '../../../../core/theme/tokens/anchor_tokens.dart';
 import '../../../../core/widgets/check_circle.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../reminders/presentation/reminder_labels.dart';
+import '../../../settings/presentation/theme_preferences_controller.dart';
 import '../../../tags/domain/tag.dart';
 import '../../domain/note.dart';
 import '../../domain/note_blocks.dart';
@@ -17,7 +19,7 @@ import 'card_registry.dart';
 import 'note_card_content.dart';
 import 'note_surface.dart';
 
-class NoteCard extends StatefulWidget {
+class NoteCard extends ConsumerStatefulWidget {
   const NoteCard({
     super.key,
     required this.note,
@@ -46,10 +48,10 @@ class NoteCard extends StatefulWidget {
   final VoidCallback? onLongPress;
 
   @override
-  State<NoteCard> createState() => _NoteCardState();
+  ConsumerState<NoteCard> createState() => _NoteCardState();
 }
 
-class _NoteCardState extends State<NoteCard>
+class _NoteCardState extends ConsumerState<NoteCard>
     with SingleTickerProviderStateMixin {
   late final AnimationController _press = AnimationController(
     vsync: this,
@@ -79,6 +81,9 @@ class _NoteCardState extends State<NoteCard>
     final snippet = snippetTextOf(note.content);
     final l10n = context.l10n;
     final reminder = note.reminder;
+    final pictures = ref.watch(cardPicturesControllerProvider)
+        ? note.imagePreviewData
+        : const <NoteImagePreview>[];
     final date =
         widget.status ??
         (widget.layout == CardLayout.list && note.updatedAt != null
@@ -88,8 +93,7 @@ class _NoteCardState extends State<NoteCard>
       displayTitleOf(note.title, l10n),
       if (snippet.isNotEmpty)
         snippet.length > 120 ? '${snippet.substring(0, 120)}…' : snippet,
-      if (note.imagePreviewData.isNotEmpty)
-        l10n.cardPictures(note.imagePreviewData.length),
+      if (pictures.isNotEmpty) l10n.cardPictures(pictures.length),
       for (final tag in widget.tags) l10n.tagSheetLabel(tag.name),
       if (reminder != null) reminderSpokenLabel(reminder, l10n),
       if (note.sharedBy != null) l10n.shareSharedBy(note.sharedBy!.name),
@@ -119,6 +123,7 @@ class _NoteCardState extends State<NoteCard>
             layout: widget.layout,
             status: widget.status,
             isSelected: widget.isSelected,
+            previews: pictures,
             check: widget.isSelecting
                 ? _SelectionCheck(
                     isSelected: widget.isSelected,

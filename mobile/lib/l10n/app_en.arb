@@ -956,6 +956,14 @@
   "@settingsDensityHelp": {
     "description": "Under the Density setting; Compact is the name of one of its options."
   },
+  "settingsCardPictures": "Pictures on note cards",
+  "@settingsCardPictures": {
+    "description": "Switch in Settings, Appearance: whether note cards in the notes list show the note's pictures."
+  },
+  "settingsCardPicturesHelp": "Show a note’s first pictures at the top of its card.",
+  "@settingsCardPicturesHelp": {
+    "description": "Under the Pictures on note cards switch. The pictures stay in the note; only the card hides them."
+  },
   "settingsTheme": "Theme",
   "@settingsTheme": {
     "description": "Screen reader name of the group of light, dark and automatic theme choices."

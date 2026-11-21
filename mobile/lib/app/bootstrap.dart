@@ -127,6 +127,7 @@ Future<AppBootstrap> initializeApp({
   return AppBootstrap(
     themeMode: themeMode,
     displayDensity: displayDensity,
+    showCardPictures: await preferences.getShowCardPictures(),
     editorPreferences: editorPreferences,
     foldedChecklistNotes: await preferences.getFoldedChecklistNotes(),
     openArchivedTags: await preferences.getOpenArchivedTags(),

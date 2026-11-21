@@ -9,6 +9,7 @@ class StorageKeys {
   static const userData = 'user_data';
   static const themeMode = 'theme_mode';
   static const displayDensity = 'display_density';
+  static const showCardPictures = 'notes_show_card_pictures';
   static const sortChecklistItems = 'editor_sort_checklist_items';
   static const foldedChecklistNotes = 'editor_folded_checklist_notes';
   static const noteFont = 'editor_note_face';

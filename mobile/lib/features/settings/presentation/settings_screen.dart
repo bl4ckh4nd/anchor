@@ -159,6 +159,7 @@ class _AppearanceSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final density = ref.watch(displayDensityControllerProvider);
+    final showCardPictures = ref.watch(cardPicturesControllerProvider);
     final l10n = context.l10n;
     return Section(
       label: l10n.settingsAppearance,
@@ -179,6 +180,14 @@ class _AppearanceSection extends ConsumerWidget {
                   .read(displayDensityControllerProvider.notifier)
                   .setDensity(option),
             ),
+          ),
+          SwitchRow(
+            label: l10n.settingsCardPictures,
+            subtitle: l10n.settingsCardPicturesHelp,
+            value: showCardPictures,
+            onChanged: ref
+                .read(cardPicturesControllerProvider.notifier)
+                .setShown,
           ),
         ],
       ),

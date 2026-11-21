@@ -11,6 +11,7 @@ class AppBootstrap {
   const AppBootstrap({
     this.themeMode = ThemeMode.system,
     this.displayDensity = DisplayDensity.standard,
+    this.showCardPictures = true,
     this.editorPreferences = const EditorPreferences(),
     this.foldedChecklistNotes = const [],
     this.openArchivedTags = const [],
@@ -20,6 +21,7 @@ class AppBootstrap {
 
   final ThemeMode themeMode;
   final DisplayDensity displayDensity;
+  final bool showCardPictures;
   final EditorPreferences editorPreferences;
 
   final List<String> foldedChecklistNotes;
