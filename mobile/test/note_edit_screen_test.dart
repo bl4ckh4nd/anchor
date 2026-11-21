@@ -11,6 +11,7 @@ import 'package:anchor/features/notes/data/repository/note_attachments_repositor
 import 'package:anchor/features/notes/data/repository/note_copier.dart';
 import 'package:anchor/features/notes/data/repository/notes_repository.dart';
 import 'package:anchor/features/notes/domain/note.dart';
+import 'package:anchor/features/notes/domain/note_attachment.dart';
 import 'package:anchor/features/notes/presentation/editor/document_lines.dart';
 import 'package:anchor/features/notes/presentation/editor/editor_format.dart';
 import 'package:anchor/features/notes/presentation/editor/editor_tool_button.dart';
@@ -24,6 +25,7 @@ import 'package:anchor/features/notes/presentation/note_edit_screen.dart';
 import 'package:anchor/features/notes/presentation/widgets/note_attachments_strip.dart';
 import 'package:anchor/features/notes/presentation/widgets/note_chips.dart';
 import 'package:anchor/features/notes/presentation/widgets/note_header.dart';
+import 'package:anchor/features/notes/presentation/widgets/picture_tile.dart';
 import 'package:anchor/features/notes/presentation/widgets/read_only_bottom_bar.dart';
 import 'package:anchor/features/reminders/data/notification_gateway.dart';
 import 'package:anchor/features/reminders/domain/reminder_schedule.dart';
@@ -2519,6 +2521,61 @@ void main() {
 
       verify(() => notesRepo.deleteForever(['copy-1'])).called(1);
       expect(location(tester), '/note/n1');
+      await drainSnackbar(tester);
+    });
+
+    testWidgets('a file deleted while its Undo shows is deleted before the '
+        'copy is made', (tester) async {
+      final calls = <String>[];
+      when(() => attachmentsRepo.watchAttachments('n1')).thenAnswer(
+        (_) => Stream.value(const [
+          NoteAttachment(
+            id: 'a1',
+            noteId: 'n1',
+            type: AttachmentType.image,
+            originalFilename: 'harbor.jpg',
+            mimeType: 'image/jpeg',
+            fileSize: 1200,
+          ),
+        ]),
+      );
+      when(
+        () => attachmentsRepo.currentIdOf(any()),
+      ).thenAnswer((call) => call.positionalArguments.first as String);
+      final deleting = Completer<void>();
+      when(() => attachmentsRepo.deleteAttachment('n1', 'a1')).thenAnswer((_) {
+        calls.add('delete a1');
+        return deleting.future;
+      });
+      when(() => copier.copy('n1')).thenAnswer((_) async {
+        calls.add('copy');
+        return 'copy-1';
+      });
+      when(
+        () => notesRepo.getNote('copy-1'),
+      ).thenAnswer((_) async => const Note(id: 'copy-1', title: 'Groceries'));
+      await pumpScreen(tester, note: original, copier: copier);
+      await tester.pumpAndSettle();
+
+      tester.widget<PictureTile>(find.byType(PictureTile)).onDelete!();
+      await tester.pump();
+      expect(find.text('Picture deleted'), findsOneWidget);
+      await tester.tap(barButton('More'));
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(calls, isEmpty);
+      await tester.tap(find.text('Make a copy'));
+      await tester.pump();
+
+      expect(calls, ['delete a1']);
+      deleting.complete();
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      expect(calls, ['delete a1', 'copy']);
+      expect(location(tester), '/note/copy-1');
       await drainSnackbar(tester);
     });
 

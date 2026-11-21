@@ -363,6 +363,7 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen>
     try {
       try {
         await _draft.saveNow();
+        await NoteAttachmentsStrip.settle(note.id);
         copyId = await ref.read(noteCopierProvider).copy(note.id);
       } catch (_) {
         if (mounted) {
