@@ -10,6 +10,7 @@ import {
   Plus,
   Repeat,
 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import type { RefObject } from "react";
 import * as React from "react";
 import { createPortal } from "react-dom";
@@ -34,12 +35,14 @@ import { cn } from "@/lib/utils";
 import { deltaToFullPlainText, isContentBlank } from "../../quill";
 import { isReminderPast, reminderLabel } from "../../reminder";
 import type { NoteReminder, ReminderRecurrence } from "../../types";
+import { QUERY_PARAM } from "../../url-with-query";
 import { AttachmentStrip, type AttachmentStripHandle } from "../attachments";
 import { RichTextEditor, type RichTextEditorHandle } from "../editor";
 import { formatCardDate } from "../note-card";
 import { useRingOnce } from "../reminder-chip";
 import { ReminderPopoverContent } from "../reminder-picker";
 import { NoteOutline } from "./note-outline";
+import { SearchMatchesBar, useSearchMatches } from "./search-matches";
 import { useTitleLine, withoutLineBreaks } from "./use-title-line";
 
 export interface Person {
@@ -108,6 +111,10 @@ export function NoteEditorContent(props: NoteEditorContentProps) {
   const people = props.sharedBy ? [] : props.sharedWith;
   const [hasFiles, setHasFiles] = React.useState(false);
   const startersRoving = useRovingFocus<HTMLDivElement>();
+  const searchMatches = useSearchMatches(
+    root,
+    useSearchParams().get(QUERY_PARAM) ?? "",
+  );
   const titleLine = useTitleLine(
     props.titleInputRef,
     props.contentEditorRef,
@@ -154,10 +161,12 @@ export function NoteEditorContent(props: NoteEditorContentProps) {
     );
 
   return (
-    <div ref={root} className="note-in">
+    <div ref={root} className="note-in" onInput={searchMatches.onInput}>
       {props.readOnlyBar}
       {props.readOnly ? (
-        <h1 className="n-title">{props.title || "Untitled"}</h1>
+        <h1 className="n-title" data-find={props.title ? "" : undefined}>
+          {props.title || "Untitled"}
+        </h1>
       ) : (
         <TitleField
           ref={props.titleInputRef}
@@ -165,6 +174,7 @@ export function NoteEditorContent(props: NoteEditorContentProps) {
           onChange={(title) => props.onTitleChange(withoutLineBreaks(title))}
           onKeyDown={titleLine.onKeyDown}
           onPaste={titleLine.onPaste}
+          hasMarks={searchMatches.isOn}
         />
       )}
       {!props.isNew && (edited || props.sharedBy || people.length > 0) && (
@@ -275,6 +285,18 @@ export function NoteEditorContent(props: NoteEditorContentProps) {
           onAddAttachment={
             props.canUpload ? () => strip.current?.pick() : undefined
           }
+          above={
+            <SearchMatchesBar
+              matches={searchMatches}
+              onStopped={() =>
+                root.current
+                  ?.querySelector<HTMLElement>(
+                    '.ql-editor[contenteditable="true"]',
+                  )
+                  ?.focus({ preventScroll: true })
+              }
+            />
+          }
           below={starters}
           noteId={props.noteId}
           firstLine={titleLine.firstLine}
@@ -304,12 +326,15 @@ function TitleField({
   onChange,
   onKeyDown,
   onPaste,
+  hasMarks,
 }: {
   ref: RefObject<HTMLTextAreaElement | null>;
   value: string;
   onChange: (value: string) => void;
   onKeyDown: React.KeyboardEventHandler<HTMLTextAreaElement>;
   onPaste: React.ClipboardEventHandler<HTMLTextAreaElement>;
+  /** Search matches can't be marked in a text box, so a copy shows them. */
+  hasMarks: boolean;
 }) {
   // biome-ignore lint/correctness/useExhaustiveDependencies: the height follows the text.
   React.useLayoutEffect(() => {
@@ -326,18 +351,25 @@ function TitleField({
   }, [ref, value]);
 
   return (
-    <textarea
-      ref={ref}
-      className="n-title"
-      rows={1}
-      value={value}
-      aria-label="Title"
-      placeholder="Title"
-      spellCheck={false}
-      onChange={(e) => onChange(e.target.value)}
-      onKeyDown={onKeyDown}
-      onPaste={onPaste}
-    />
+    <div className="n-title-box">
+      {hasMarks && (
+        <div className="n-title" data-find="" aria-hidden>
+          {value}
+        </div>
+      )}
+      <textarea
+        ref={ref}
+        className="n-title"
+        rows={1}
+        value={value}
+        aria-label="Title"
+        placeholder="Title"
+        spellCheck={false}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={onKeyDown}
+        onPaste={onPaste}
+      />
+    </div>
   );
 }
 

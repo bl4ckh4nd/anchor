@@ -231,6 +231,96 @@ textarea.n-title {
   resize: none;
   field-sizing: content;
 }
+/* A copy behind the title's text box carries its search matches. */
+.n-title-box {
+  display: grid;
+}
+.n-title-box > .n-title {
+  grid-area: 1 / 1;
+}
+.n-title-box > div.n-title {
+  color: transparent;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Search matches in the open note: search-matches.tsx sets the ranges. */
+::highlight(search-match) {
+  background-color: color-mix(in srgb, var(--accent) 24%, transparent);
+}
+::highlight(search-current) {
+  background-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.find-bar {
+  position: sticky;
+  top: var(--tb-top, 64px);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: --spacing(1);
+  width: max-content;
+  max-width: 100%;
+  margin: --spacing(2.5) 0 --spacing(1);
+  padding: --spacing(1) --spacing(1) --spacing(1) --spacing(3);
+  border-radius: var(--radius-md);
+  background: var(--note-surface);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--note-border) 70%, transparent);
+  color: var(--note-muted);
+  font-size: var(--text-meta);
+}
+.tb + .find-bar {
+  top: calc(var(--tb-top, 64px) + var(--size-toolbar-button-height) + 14px);
+  transition: top var(--duration-header) var(--ease-standard);
+}
+.find-term {
+  overflow: hidden;
+  min-width: 0;
+  color: var(--foreground);
+  font-weight: var(--font-weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.find-count {
+  flex: none;
+  margin: 0 --spacing(1.5) 0 --spacing(1);
+  font-variant-numeric: tabular-nums;
+}
+.find-bar button {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: calc(var(--radius-md) - 3px);
+  background: transparent;
+  color: var(--foreground);
+  cursor: pointer;
+}
+@media (hover: hover) {
+  .find-bar button:hover {
+    background: color-mix(in srgb, var(--foreground) 9%, transparent);
+  }
+}
+.find-bar button svg {
+  width: 16px;
+  height: 16px;
+}
+@media (forced-colors: active) {
+  ::highlight(search-match) {
+    background-color: Mark;
+    color: MarkText;
+  }
+  ::highlight(search-current) {
+    background-color: Highlight;
+    color: HighlightText;
+  }
+}
+
 .n-title::placeholder {
   color: var(--note-muted);
   opacity: 1;
@@ -409,6 +499,10 @@ textarea.n-title {
 
 /* Editor page on phones */
 @media (width < 768px) {
+  /* The toolbar is at the bottom here. */
+  .ed .tb + .find-bar {
+    top: var(--tb-top, 64px);
+  }
   .ed-head {
     padding: --spacing(2.5) --spacing(2.5) 0;
   }
