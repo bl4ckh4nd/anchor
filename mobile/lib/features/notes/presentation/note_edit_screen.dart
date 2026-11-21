@@ -102,6 +102,7 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen>
     _openedAsNew,
   );
   bool _isBodyBlank = true;
+  bool _isCopying = false;
 
   Animation<double>? _routeAnimation;
   bool _isOpen = true;
@@ -344,6 +345,7 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen>
 
   /// Copies are made on the server; the copy opens in place of this note.
   Future<void> _makeCopy(Note note) async {
+    if (_isCopying) return;
     final l10n = context.l10n;
     if (!ref.read(isOnlineProvider)) {
       AppSnackbar.show(context, l10n.noteCopyOffline, kind: SnackbarKind.info);
@@ -351,9 +353,10 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen>
     }
     final router = GoRouter.of(context);
     final repo = ref.read(notesRepositoryProvider);
-    await _draft.saveNow();
     final String copyId;
+    _isCopying = true;
     try {
+      await _draft.saveNow();
       copyId = await ref.read(noteCopierProvider).copy(note.id);
     } catch (_) {
       if (mounted) {
@@ -364,6 +367,8 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen>
         );
       }
       return;
+    } finally {
+      _isCopying = false;
     }
     final copy = await repo.getNote(copyId);
     if (!mounted) return;

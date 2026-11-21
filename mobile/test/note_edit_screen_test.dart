@@ -8,6 +8,7 @@ import 'package:anchor/core/storage/preferences_repository.dart';
 import 'package:anchor/core/widgets/app_snackbar.dart';
 import 'package:anchor/core/widgets/grouped_list.dart';
 import 'package:anchor/features/notes/data/repository/note_attachments_repository.dart';
+import 'package:anchor/features/notes/data/repository/note_copier.dart';
 import 'package:anchor/features/notes/data/repository/notes_repository.dart';
 import 'package:anchor/features/notes/domain/note.dart';
 import 'package:anchor/features/notes/presentation/editor/document_lines.dart';
@@ -48,6 +49,8 @@ class MockAttachmentsRepository extends Mock
     implements NoteAttachmentsRepository {}
 
 class MockPreferencesRepository extends Mock implements PreferencesRepository {}
+
+class MockNoteCopier extends Mock implements NoteCopier {}
 
 class _TagFilter extends SelectedTagFilter {
   _TagFilter(this.tagId);
@@ -107,6 +110,8 @@ void main() {
     bool isOnlyPage = false,
     bool opensFromList = false,
     String? tagFilter,
+    bool isOnline = true,
+    NoteCopier? copier,
   }) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -122,6 +127,8 @@ void main() {
           activeUserIdProvider.overrideWith(FakeActiveUserId.new),
           notificationGatewayProvider.overrideWithValue(gateway),
           selectedTagFilterProvider.overrideWith(() => _TagFilter(tagFilter)),
+          isOnlineProvider.overrideWithValue(isOnline),
+          if (copier != null) noteCopierProvider.overrideWithValue(copier),
         ],
         child: MaterialApp.router(
           localizationsDelegates: const [
@@ -149,6 +156,13 @@ void main() {
                     path: 'note',
                     builder: (_, _) =>
                         NoteEditScreen(note: note, noteId: note?.id),
+                  ),
+                  GoRoute(
+                    path: 'note/:id',
+                    builder: (_, state) => NoteEditScreen(
+                      note: state.extra as Note?,
+                      noteId: state.pathParameters['id'],
+                    ),
                   ),
                 ],
               ),
@@ -2442,6 +2456,68 @@ void main() {
       expect(barButton('Edit'), findsNothing);
       expect(calls.launched, isEmpty);
       expect(calls.haptics, ['HapticFeedbackType.selectionClick']);
+    });
+  });
+
+  group('Make a copy', () {
+    const original = Note(id: 'n1', title: 'Groceries', content: null);
+    late MockNoteCopier copier;
+
+    setUp(() {
+      copier = MockNoteCopier();
+      when(() => notesRepo.deleteForever(any())).thenAnswer((_) async {});
+    });
+
+    // pumpAndSettle would wait out the snackbar.
+    Future<void> makeCopy(WidgetTester tester) async {
+      await tester.tap(barButton('More'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Make a copy'));
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+    }
+
+    String location(WidgetTester tester) => GoRouter.of(
+      tester.element(find.byType(NoteEditScreen)),
+    ).routerDelegate.currentConfiguration.uri.path;
+
+    testWidgets('offline, it says to connect and copies nothing', (
+      tester,
+    ) async {
+      await pumpScreen(tester, note: original, isOnline: false, copier: copier);
+      await tester.pumpAndSettle();
+
+      await makeCopy(tester);
+
+      expect(
+        find.text('Connect to the internet to make a copy.'),
+        findsOneWidget,
+      );
+      verifyNever(() => copier.copy(any()));
+      await drainSnackbar(tester);
+    });
+
+    testWidgets('opens the copy, and Undo deletes it and goes back to the '
+        'original', (tester) async {
+      when(() => copier.copy('n1')).thenAnswer((_) async => 'copy-1');
+      when(
+        () => notesRepo.getNote('copy-1'),
+      ).thenAnswer((_) async => const Note(id: 'copy-1', title: 'Groceries'));
+      await pumpScreen(tester, note: original, copier: copier);
+      await tester.pumpAndSettle();
+
+      await makeCopy(tester);
+
+      expect(location(tester), '/note/copy-1');
+      expect(find.text('Copy made. You’re editing the copy.'), findsOneWidget);
+
+      await tester.tap(find.text('Undo'));
+      await tester.pumpAndSettle();
+
+      verify(() => notesRepo.deleteForever(['copy-1'])).called(1);
+      expect(location(tester), '/note/n1');
+      await drainSnackbar(tester);
     });
   });
 }
