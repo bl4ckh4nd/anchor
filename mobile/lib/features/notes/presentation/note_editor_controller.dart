@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/widgets.dart';
 
 import '../../../core/ids.dart';
 import '../../../core/logging/app_logger.dart';
@@ -11,6 +10,7 @@ import '../domain/note.dart';
 import '../domain/note_blocks.dart';
 import '../domain/note_share.dart';
 import '../domain/user_summary.dart';
+import 'editor/search_matches.dart';
 
 /// Each member is null while there is no editor.
 abstract interface class NoteEditorContent {
@@ -60,7 +60,7 @@ class NoteEditorController extends ChangeNotifier {
 
   final String? _openedId;
 
-  final TextEditingController title = TextEditingController();
+  final MarkedTextController title = MarkedTextController();
 
   final ValueNotifier<int> words = ValueNotifier(0);
 

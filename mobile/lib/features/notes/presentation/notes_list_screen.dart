@@ -173,7 +173,15 @@ class _NotesListScreenState extends ConsumerState<NotesListScreen> {
 
   void _open(Note note) {
     if (_searching) FocusScope.of(context).unfocus();
-    context.go(AppRoutes.note(note.id), extra: note);
+    final query = ref.read(searchQueryProvider).trim();
+    // The note fills in the search's matches.
+    context.go(
+      Uri(
+        path: AppRoutes.note(note.id),
+        queryParameters: query.isEmpty ? null : {'q': query},
+      ).toString(),
+      extra: note,
+    );
   }
 
   void _newNote() => context.go(AppRoutes.newNote);

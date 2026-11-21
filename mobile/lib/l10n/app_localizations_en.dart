@@ -2699,6 +2699,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noteTitleHint => 'Title';
 
   @override
+  String noteSearchTerm(String query) {
+    return '“$query”';
+  }
+
+  @override
+  String noteSearchCount(int current, int total) {
+    return '$current of $total';
+  }
+
+  @override
+  String get noteSearchPrevious => 'Previous match';
+
+  @override
+  String get noteSearchNext => 'Next match';
+
+  @override
+  String get noteSearchStop => 'Stop highlighting';
+
+  @override
   String get viewOrder => 'Order';
 
   @override

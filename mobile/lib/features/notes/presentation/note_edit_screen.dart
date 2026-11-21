@@ -36,6 +36,7 @@ import 'editor/editor_overlay_controller.dart';
 import 'editor/editor_palette.dart';
 import 'editor/line_kind.dart';
 import 'editor/rich_text_editor.dart';
+import 'editor/search_matches.dart';
 import 'note_actions.dart';
 import 'note_editor_controller.dart';
 import 'note_labels.dart';
@@ -48,14 +49,23 @@ import 'widgets/note_header.dart';
 import 'widgets/note_more_sheet.dart';
 import 'widgets/note_surface.dart';
 import 'widgets/read_only_bottom_bar.dart';
+import 'widgets/search_matches_bar.dart';
 import 'widgets/share_sheet.dart';
 import 'widgets/title_input_formatter.dart';
 
 class NoteEditScreen extends ConsumerStatefulWidget {
-  const NoteEditScreen({super.key, this.noteId, this.note});
+  const NoteEditScreen({
+    super.key,
+    this.noteId,
+    this.note,
+    this.searchQuery = '',
+  });
 
   final String? noteId;
   final Note? note;
+
+  /// The search the note was opened from: its matches are filled in.
+  final String searchQuery;
 
   @override
   ConsumerState<NoteEditScreen> createState() => _NoteEditScreenState();
@@ -108,6 +118,12 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen>
   bool get _isReadOnly => _draft.isReadOnly;
 
   bool get _writing => _titleFocus.hasFocus || _editorFocus.hasFocus;
+
+  /// Empty once the person types or stops it.
+  late String _searchQuery = widget.searchQuery.trim();
+  int _searchIndex = 0;
+  int _bodyMatches = 0;
+  bool _hasRevealedMatch = false;
 
   @override
   void initState() {
@@ -502,6 +518,64 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen>
     );
   }
 
+  List<TextRange> get _titleMatches => findMatches(
+    _isReadOnly ? _draft.note?.title ?? '' : _draft.title.text,
+    _searchQuery,
+  );
+
+  void _stopSearch() {
+    if (_searchQuery.isEmpty) return;
+    setState(() {
+      _searchQuery = '';
+      _bodyMatches = 0;
+    });
+  }
+
+  void _bodyMatchesFound(int count) {
+    setState(() => _bodyMatches = count);
+    if (_hasRevealedMatch || _titleMatches.length + count == 0) return;
+    _hasRevealedMatch = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _revealMatch());
+  }
+
+  void _stepSearch(int step) {
+    final total = _titleMatches.length + _bodyMatches;
+    if (total == 0) return;
+    setState(() => _searchIndex = (_searchIndex + step) % total);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _revealMatch());
+  }
+
+  /// Scrolls the current match to the middle, unless it's in view.
+  void _revealMatch() {
+    if (!mounted || !_scroll.hasClients) return;
+    final position = _scroll.position;
+    final titleCount = _titleMatches.length;
+    double target;
+    if (_searchIndex < titleCount) {
+      target = 0;
+    } else {
+      final rect = _editor?.searchMatchRect(_searchIndex - titleCount);
+      if (rect == null || rect.height <= 0) return;
+      final top =
+          MediaQuery.viewPaddingOf(context).top + PageBar.heightOf(context);
+      final bottom =
+          MediaQuery.sizeOf(context).height -
+          context.safeBottomAtRest -
+          _searchBarSpace;
+      if (rect.top >= top && rect.bottom <= bottom) return;
+      target = position.pixels + rect.center.dy - (top + bottom) / 2;
+    }
+    _scroll.animateTo(
+      target.clamp(0, position.maxScrollExtent),
+      duration: context.motion(AnchorTokens.motionDurationMove),
+      curve: AnchorTokens.motionEaseStandard,
+    );
+  }
+
+  /// Room the search bar takes at the bottom, with its gaps.
+  static const double _searchBarSpace =
+      AnchorTokens.sizeControlSmall + AnchorTokens.space16;
+
   void _shakeReadOnly() {
     Haptics.warning();
     if (!context.isMotionReduced) _nudge.forward(from: 0);
@@ -538,6 +612,20 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen>
     final note = _draft.note;
     final isNew = _draft.isNew;
     final isTrashed = _draft.isTrashed;
+    final hasReadOnlyBar = _isReadOnly && note != null && !note.isDeleted;
+    // Above the read-only bar when there is one.
+    final searchBarBottom =
+        safeBottom + 8 + (hasReadOnlyBar ? _readOnlyBarHeight + 8 : 0);
+    final titleMatches = _titleMatches;
+    final matchCount = titleMatches.length + _bodyMatches;
+    final searchIndex = matchCount == 0
+        ? 0
+        : _searchIndex.clamp(0, matchCount - 1);
+    final isSearchShown = matchCount > 0;
+    // The title field reads these when it builds below.
+    _draft.title
+      ..matches = titleMatches
+      ..current = searchIndex < titleMatches.length ? searchIndex : -1;
     final bar = NoteBar(
       appearance: appearance,
       scrollOffset: _scrollOffset,
@@ -566,8 +654,13 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen>
                 onTap: _shakeReadOnly,
                 child: Padding(
                   padding: titlePadding,
-                  child: Text(
-                    displayTitleOf(note?.title ?? '', context.l10n),
+                  child: Text.rich(
+                    markedSpan(
+                      displayTitleOf(note?.title ?? '', context.l10n),
+                      // "Untitled" stands in only for no title: no matches.
+                      titleMatches,
+                      current: _draft.title.current,
+                    ),
                     style: titleStyle.copyWith(color: colors.appText),
                   ),
                 ),
@@ -583,6 +676,7 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen>
                 textCapitalization: TextCapitalization.sentences,
                 inputFormatters: [TitleInputFormatter(onEnter: _splitTitle)],
                 onEditingComplete: _splitTitle,
+                onChanged: (_) => _stopSearch(),
                 style: titleStyle.copyWith(color: colors.appText),
                 cursorColor: colors.accentStrong,
                 decoration: InputDecoration(
@@ -737,7 +831,13 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen>
                               .setFolded(note.id, isFolded: isFolded),
                     visibleArea: _visibleArea,
                     hasSlashHint: _openedAsNew,
-                    onChanged: _draft.contentChanged,
+                    onChanged: () {
+                      _stopSearch();
+                      _draft.contentChanged();
+                    },
+                    searchQuery: _searchQuery,
+                    searchIndex: searchIndex - titleMatches.length,
+                    onSearchMatches: _bodyMatchesFound,
                     onSelectionChanged: _editorOverlay.selectionMoved,
                     onBlankChanged: _bodyBlankChanged,
                     onBackspaceAtStart: _isReadOnly ? null : _joinTitle,
@@ -796,7 +896,9 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen>
                           behavior: HitTestBehavior.opaque,
                           onTap: _focusEditorEnd,
                           child: _BottomSpacer(
-                            height: underText,
+                            height:
+                                underText +
+                                (isSearchShown ? _searchBarSpace : 0),
                             slashQuery: writing ? _editor?.slashQuery : null,
                             slashHeight: _editorOverlay.slashMenuSpace,
                           ),
@@ -820,6 +922,23 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen>
                 onAddAttachment: _showAdd,
               ),
             ),
+            if (isSearchShown && !writing)
+              Positioned(
+                left: AnchorTokens.spaceGutterPhone,
+                right: AnchorTokens.spaceGutterPhone,
+                bottom: searchBarBottom,
+                child: Center(
+                  child: SearchMatchesBar(
+                    query: _searchQuery,
+                    current: searchIndex,
+                    total: matchCount,
+                    appearance: appearance,
+                    onPrevious: () => _stepSearch(-1),
+                    onNext: () => _stepSearch(1),
+                    onStop: _stopSearch,
+                  ),
+                ),
+              ),
             if (_isReadOnly && note != null && !note.isDeleted)
               Positioned(
                 left: AnchorTokens.spaceGutterPhone,

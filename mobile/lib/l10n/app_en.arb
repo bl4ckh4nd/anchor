@@ -3605,6 +3605,42 @@
   "@noteTitleHint": {
     "description": "Placeholder of the note title."
   },
+  "noteSearchTerm": "“{query}”",
+  "@noteSearchTerm": {
+    "description": "The search a note was opened from, in the bar that steps through its matches in the note.",
+    "placeholders": {
+      "query": {
+        "type": "String",
+        "example": "bias probe"
+      }
+    }
+  },
+  "noteSearchCount": "{current} of {total}",
+  "@noteSearchCount": {
+    "description": "Which search match in the note is the current one, and how many there are.",
+    "placeholders": {
+      "current": {
+        "type": "int",
+        "example": "1"
+      },
+      "total": {
+        "type": "int",
+        "example": "4"
+      }
+    }
+  },
+  "noteSearchPrevious": "Previous match",
+  "@noteSearchPrevious": {
+    "description": "Screen reader label of the button that goes to the previous search match in the note."
+  },
+  "noteSearchNext": "Next match",
+  "@noteSearchNext": {
+    "description": "Screen reader label of the button that goes to the next search match in the note."
+  },
+  "noteSearchStop": "Stop highlighting",
+  "@noteSearchStop": {
+    "description": "Screen reader label of the button that hides the search matches in the note."
+  },
   "viewOrder": "Order",
   "@viewOrder": {
     "description": "Section label in the view options sheet for the sort direction."

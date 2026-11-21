@@ -6,6 +6,7 @@ import '../../../../core/widgets/marker_stroke.dart';
 import 'checklist_fold.dart';
 import 'editor_format.dart';
 import 'list_markers.dart';
+import 'search_matches.dart';
 
 class HighlightUnderlay extends CustomPainter {
   HighlightUnderlay({
@@ -17,6 +18,8 @@ class HighlightUnderlay extends CustomPainter {
     required this.isDragged,
     required this.typography,
     required this.textScaler,
+    this.searchMatches = const [],
+    this.searchIndex = -1,
   }) : super(repaint: repaint);
 
   final QuillController controller;
@@ -29,6 +32,10 @@ class HighlightUnderlay extends CustomPainter {
   final NoteTypography typography;
   final TextScaler textScaler;
 
+  /// Filled in over the text, apart from folded lines.
+  final List<TextRange> searchMatches;
+  final int searchIndex;
+
   @override
   void paint(Canvas canvas, Size size) {
     final render = editor();
@@ -40,6 +47,74 @@ class HighlightUnderlay extends CustomPainter {
     for (final node in controller.document.root.children) {
       _paintNode(canvas, node, render, host, offset);
       offset += node.length;
+    }
+    _paintSearchMatches(canvas, render, host);
+  }
+
+  void _paintSearchMatches(Canvas canvas, RenderEditor render, RenderBox host) {
+    final length = controller.document.length;
+    for (final (i, match) in searchMatches.indexed) {
+      if (match.end > length) return;
+      final line = controller.document.queryChild(match.start).node;
+      if (line is! Line || isFoldedLine(line)) continue;
+      final fill = Paint()
+        ..color = searchMatchFill(isCurrent: i == searchIndex);
+      for (final rect in _lineRects(
+        render,
+        host,
+        match.start,
+        match.end,
+        line,
+      )) {
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            rect.inflate(1),
+            const Radius.circular(3), // off-scale: hugs the letters
+          ),
+          fill,
+        );
+      }
+    }
+  }
+
+  /// Where the text from [start] to [end] is, one rectangle per screen line,
+  /// as tall as the letters of [line].
+  Iterable<Rect> _lineRects(
+    RenderEditor render,
+    RenderBox host,
+    int start,
+    int end,
+    Line line,
+  ) sync* {
+    final level = line.style.attributes[Attribute.header.key]?.value;
+    final style = level is int ? typography.heading(level) : typography.body;
+    final font = typography.font;
+    final fontSize = textScaler.scale(style.fontSize!);
+    final textHeight = (font.ascent + font.descent) * fontSize;
+    var position = start;
+    var guard = 0;
+    while (position < end && guard++ < 200) {
+      final screenLine = render.getLineAtOffset(TextPosition(offset: position));
+      final segmentEnd = screenLine.end.clamp(position, end);
+      if (segmentEnd <= position) break;
+      final startRect = render.getLocalRectForCaret(
+        TextPosition(offset: position),
+      );
+      final endRect = render.getLocalRectForCaret(
+        TextPosition(offset: segmentEnd, affinity: TextAffinity.upstream),
+      );
+      final topLeft = host.globalToLocal(
+        render.localToGlobal(startRect.topLeft),
+      );
+      final right = host
+          .globalToLocal(
+            render.localToGlobal(Offset(endRect.left, startRect.top)),
+          )
+          .dx;
+      // The caret is as tall as the line, and the letters sit in its middle.
+      final top = topLeft.dy + (startRect.height - textHeight) / 2;
+      yield Rect.fromLTWH(topLeft.dx, top, right - topLeft.dx, textHeight);
+      position = segmentEnd;
     }
   }
 
@@ -60,8 +135,6 @@ class HighlightUnderlay extends CustomPainter {
     }
     if (node is! Line || isFoldedLine(node)) return;
     final isDimmed = isDragged(node);
-    final level = node.style.attributes[Attribute.header.key]?.value;
-    final style = level is int ? typography.heading(level) : typography.body;
     var at = start;
     // Runs next to each other with the same highlight are one mark.
     String? name;
@@ -78,7 +151,7 @@ class HighlightUnderlay extends CustomPainter {
           end,
           highlightName,
           runText.toString(),
-          style: style,
+          line: node,
           isDimmed: isDimmed,
         );
       }
@@ -111,46 +184,29 @@ class HighlightUnderlay extends CustomPainter {
     int end,
     String name,
     String text, {
-    required TextStyle style,
+    required Line line,
     required bool isDimmed,
   }) {
     final color = isDimmed ? draggedColor(colors(name)) : colors(name);
     final key = '$name|${text.length > 14 ? text.substring(0, 14) : text}';
-    final font = typography.font;
+    final level = line.style.attributes[Attribute.header.key]?.value;
+    final style = level is int ? typography.heading(level) : typography.body;
     final fontSize = textScaler.scale(style.fontSize!);
-    final textHeight = (font.ascent + font.descent) * fontSize;
-    var position = start;
-    var index = 0;
-    var guard = 0;
-    while (position < end && guard++ < 200) {
-      final line = render.getLineAtOffset(TextPosition(offset: position));
-      final segmentEnd = line.end.clamp(position, end);
-      if (segmentEnd <= position) break;
-      final startRect = render.getLocalRectForCaret(
-        TextPosition(offset: position),
-      );
-      final endRect = render.getLocalRectForCaret(
-        TextPosition(offset: segmentEnd, affinity: TextAffinity.upstream),
-      );
-      final topLeft = host.globalToLocal(
-        render.localToGlobal(startRect.topLeft),
-      );
-      final right = host
-          .globalToLocal(
-            render.localToGlobal(Offset(endRect.left, startRect.top)),
-          )
-          .dx;
-      // The caret is as tall as the line, and the letters sit in its middle.
-      final top = topLeft.dy + (startRect.height - textHeight) / 2;
+    for (final (index, rect) in _lineRects(
+      render,
+      host,
+      start,
+      end,
+      line,
+    ).indexed) {
       MarkerStroke.paint(
         canvas,
-        Rect.fromLTWH(topLeft.dx, top, right - topLeft.dx, textHeight),
+        rect,
         color,
         key: key,
-        index: index++,
+        index: index,
         fontSize: fontSize,
       );
-      position = segmentEnd;
     }
   }
 

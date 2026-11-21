@@ -107,6 +107,7 @@ void main() {
     bool isOnlyPage = false,
     bool opensFromList = false,
     String? tagFilter,
+    String searchQuery = '',
   }) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -139,7 +140,11 @@ void main() {
             routes: [
               GoRoute(
                 path: '/only',
-                builder: (_, _) => NoteEditScreen(note: note, noteId: note?.id),
+                builder: (_, _) => NoteEditScreen(
+                  note: note,
+                  noteId: note?.id,
+                  searchQuery: searchQuery,
+                ),
               ),
               GoRoute(
                 path: '/',
@@ -147,8 +152,11 @@ void main() {
                 routes: [
                   GoRoute(
                     path: 'note',
-                    builder: (_, _) =>
-                        NoteEditScreen(note: note, noteId: note?.id),
+                    builder: (_, _) => NoteEditScreen(
+                      note: note,
+                      noteId: note?.id,
+                      searchQuery: searchQuery,
+                    ),
                   ),
                 ],
               ),
@@ -393,6 +401,65 @@ void main() {
     await leaveNote(tester);
 
     verifyNever(() => notesRepo.updateNote(any()));
+  });
+
+  group('opened from a search', () {
+    const note = Note(
+      id: 'n1',
+      title: 'Bias probe log',
+      content:
+          '{"ops":[{"insert":"Check the bias probe.\\nOrder a BIAS PROBE.\\n"}]}',
+    );
+
+    testWidgets('steps through the matches in the title and text, and '
+        'changes nothing in the note', (tester) async {
+      await pumpScreen(tester, note: note, searchQuery: ' bias probe ');
+      await tester.pumpAndSettle();
+      final before = editorController(tester).document.toDelta();
+
+      expect(find.text('“bias probe”'), findsOneWidget);
+      expect(find.text('1 of 3'), findsOneWidget);
+      await tester.tap(barButton('Next match'));
+      await tester.pump();
+      expect(find.text('2 of 3'), findsOneWidget);
+      await tester.tap(barButton('Previous match'));
+      await tester.pump();
+      await tester.tap(barButton('Previous match'));
+      await tester.pump();
+      expect(find.text('3 of 3'), findsOneWidget);
+      await tester.tap(barButton('Stop highlighting'));
+      await tester.pump();
+
+      expect(barButton('Next match'), findsNothing);
+      expect(editorController(tester).document.toDelta(), before);
+      expect(editorController(tester).document.hasUndo, isFalse);
+      await tester.pump(const Duration(seconds: 3));
+      verifyNever(() => notesRepo.updateNote(any()));
+    });
+
+    testWidgets('typing in the title ends it and keeps what was typed', (
+      tester,
+    ) async {
+      await pumpScreen(tester, note: note, searchQuery: 'bias probe');
+      await tester.pumpAndSettle();
+      expect(find.text('1 of 3'), findsOneWidget);
+
+      await tester.enterText(titleField, 'Bias probe logs');
+      await tester.pump();
+
+      expect(barButton('Next match'), findsNothing);
+      expect(
+        tester.widget<TextField>(titleField).controller!.text,
+        'Bias probe logs',
+      );
+    });
+
+    testWidgets('shows no bar when nothing matches', (tester) async {
+      await pumpScreen(tester, note: note, searchQuery: 'valve');
+      await tester.pumpAndSettle();
+
+      expect(barButton('Next match'), findsNothing);
+    });
   });
 
   testWidgets('a read-only note with no title shows Untitled, not a field', (
