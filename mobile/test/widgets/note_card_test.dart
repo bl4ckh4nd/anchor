@@ -198,7 +198,7 @@ void main() {
     for (final layout in CardLayout.values) {
       await pumpCard(
         tester,
-        withPicture(),
+        withPicture().copyWith(attachmentCount: 3),
         160,
         picture: () => Completer<String?>().future,
         layout: layout,
@@ -207,10 +207,12 @@ void main() {
 
       expect(find.byType(Shimmer), findsNothing, reason: '$layout');
       expect(find.byType(Image), findsNothing, reason: '$layout');
-      expect(
-        tester.getSemantics(find.byType(NoteCard)).label,
-        isNot(contains('picture')),
-      );
+      // The note still says it has files, as on the web.
+      expect(find.byIcon(LucideIcons.paperclip), findsOneWidget);
+      expect(find.text('3'), findsOneWidget);
+      final label = tester.getSemantics(find.byType(NoteCard)).label;
+      expect(label, isNot(contains('picture')));
+      expect(label, contains('3 attachments'));
     }
     semantics.dispose();
   });

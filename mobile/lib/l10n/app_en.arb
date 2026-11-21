@@ -2637,6 +2637,15 @@
       }
     }
   },
+  "cardAttachments": "{count, plural, =1{1 attachment} other{{count} attachments}}",
+  "@cardAttachments": {
+    "description": "Read out by screen readers with a note card that shows no pictures: how many files the note has.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "shareSharedBy": "Shared by {name}",
   "@shareSharedBy": {
     "description": "Under a note’s title, or spoken on a card: who shared the note with the person.",

@@ -93,7 +93,10 @@ class _NoteCardState extends ConsumerState<NoteCard>
       displayTitleOf(note.title, l10n),
       if (snippet.isNotEmpty)
         snippet.length > 120 ? '${snippet.substring(0, 120)}…' : snippet,
-      if (pictures.isNotEmpty) l10n.cardPictures(pictures.length),
+      if (pictures.isNotEmpty)
+        l10n.cardPictures(pictures.length)
+      else if (note.attachmentCount > 0)
+        l10n.cardAttachments(note.attachmentCount),
       for (final tag in widget.tags) l10n.tagSheetLabel(tag.name),
       if (reminder != null) reminderSpokenLabel(reminder, l10n),
       if (note.sharedBy != null) l10n.shareSharedBy(note.sharedBy!.name),

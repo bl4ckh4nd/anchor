@@ -2968,6 +2968,12 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{1 picture} other{{count} pictures}}'**
   String cardPictures(int count);
 
+  /// Read out by screen readers with a note card that shows no pictures: how many files the note has.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 attachment} other{{count} attachments}}'**
+  String cardAttachments(int count);
+
   /// Under a note’s title, or spoken on a card: who shared the note with the person.
   ///
   /// In en, this message translates to:

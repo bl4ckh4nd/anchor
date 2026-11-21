@@ -89,6 +89,7 @@ class NoteCardContent extends StatelessWidget {
               status: status,
               showDate: true,
               tags: tags,
+              files: previews.isEmpty ? note.attachmentCount : 0,
             )
           else ...[
             if (tags.isNotEmpty) _Tags(tags: tags, appearance: appearance),
@@ -97,6 +98,7 @@ class NoteCardContent extends StatelessWidget {
               appearance: appearance,
               status: status,
               showDate: false,
+              files: previews.isEmpty ? note.attachmentCount : 0,
             ),
           ],
         ],
@@ -242,6 +244,7 @@ class _Footer extends StatelessWidget {
     required this.status,
     required this.showDate,
     this.tags = const [],
+    this.files = 0,
   });
 
   final Note note;
@@ -249,6 +252,9 @@ class _Footer extends StatelessWidget {
   final String? status;
   final bool showDate;
   final List<Tag> tags;
+
+  /// Files to count with a paperclip, when no pictures show them.
+  final int files;
 
   @override
   Widget build(BuildContext context) {
@@ -304,6 +310,24 @@ class _Footer extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ),
+      if (files > 0)
+        ExcludeSemantics(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                LucideIcons.paperclip,
+                size: 13, // off-scale: card footer
+                color: muted,
+              ),
+              const SizedBox(width: 3),
+              Text(
+                '$files',
+                style: style.copyWith(fontWeight: FontWeight.w500),
+              ),
+            ],
           ),
         ),
     ];

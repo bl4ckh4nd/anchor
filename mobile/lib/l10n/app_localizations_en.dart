@@ -1993,6 +1993,17 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String cardAttachments(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count attachments',
+      one: '1 attachment',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String shareSharedBy(String name) {
     return 'Shared by $name';
   }
