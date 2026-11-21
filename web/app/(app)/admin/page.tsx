@@ -40,7 +40,15 @@ function AdminPageContent() {
   const waitingCount = pending.data?.length ?? 0;
 
   return (
-    <AppPage title={<PageTitle>Admin</PageTitle>} scrollKey="admin">
+    <AppPage
+      title={<PageTitle>Admin</PageTitle>}
+      actions={
+        <span className="text-meta text-muted-foreground tabular-nums">
+          Anchor {process.env.NEXT_PUBLIC_APP_VERSION}
+        </span>
+      }
+      scrollKey="admin"
+    >
       <div className="grid gap-4 pb-10">
         <div className="grid grid-cols-3 gap-3 max-md:gap-2">
           <StatCard
