@@ -22,8 +22,10 @@ import {
   guardedNoteFieldsChanged,
   noteContentChanged,
 } from '../utils/note-versioning.util';
+import { randomUUID } from 'crypto';
 import {
   SyncEmitterService,
+  attachmentsEmissions,
   noteEmissions,
   pinEmission,
   reminderEmission,
@@ -123,6 +125,54 @@ export class NotesService {
       }
       throw error;
     }
+  }
+
+  // A new note of the caller's own with the source's text, background, the
+  // caller's tags and copies of its attachment files. Anyone who can read the
+  // note may copy it; shares, pin, archive, reminder and history stay behind.
+  async duplicate(userId: string, id: string) {
+    const access = await this.noteAccessService.hasNoteAccess(userId, id);
+    if (!access.hasAccess || access.state !== NoteState.active) {
+      throw new NotFoundException(ERROR_MESSAGES.NOTE_NOT_FOUND);
+    }
+    const source = await this.prisma.note.findUniqueOrThrow({
+      where: { id },
+      include: {
+        tags: { where: { userId, isDeleted: false }, select: { id: true } },
+        attachments: { orderBy: { position: 'asc' } },
+      },
+    });
+
+    const copyId = randomUUID();
+    try {
+      const attachments = await this.noteAttachmentsService.copyFiles(
+        source.attachments,
+        copyId,
+        userId,
+      );
+      await this.prisma.$transaction(async (tx) => {
+        await tx.note.create({
+          data: {
+            id: copyId,
+            title: source.title,
+            content: source.content,
+            background: source.background,
+            state: NoteState.active,
+            userId,
+            tags: { connect: source.tags },
+          },
+        });
+        await tx.noteAttachment.createMany({ data: attachments });
+        await this.syncEmitter.emit(tx, [
+          ...noteEmissions([userId], copyId),
+          ...(attachments.length ? attachmentsEmissions([userId], copyId) : []),
+        ]);
+      });
+    } catch (error) {
+      await this.noteAttachmentsService.deleteAllForNote(copyId);
+      throw error;
+    }
+    return this.findOne(userId, copyId);
   }
 
   private async findCreatedNote(userId: string, id: string) {

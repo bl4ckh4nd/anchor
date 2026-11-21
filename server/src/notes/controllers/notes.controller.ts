@@ -71,6 +71,11 @@ export class NotesController {
     return this.notesService.update(userId, id, updateNoteDto);
   }
 
+  @Post(':id/duplicate')
+  duplicate(@CurrentUser('id') userId: string, @Param('id') id: string) {
+    return this.notesService.duplicate(userId, id);
+  }
+
   @Patch(':id/restore')
   restore(@CurrentUser('id') userId: string, @Param('id') id: string) {
     return this.notesService.restore(userId, id);

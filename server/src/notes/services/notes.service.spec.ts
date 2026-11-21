@@ -1,4 +1,15 @@
-import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
+import * as fs from 'fs/promises';
+import * as os from 'os';
+import * as path from 'path';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  type Mock,
+  vi,
+} from 'vitest';
 import { Prisma } from '../../generated/prisma/client';
 import { NotesService } from './notes.service';
 import { NoteAccessService } from './note-access.service';
@@ -452,5 +463,69 @@ describe('NotesService.create with a client id', () => {
     await expect(
       service.create(USER, { id: ID, title: 'Groceries' }),
     ).resolves.toEqual({ id: ID });
+  });
+});
+
+describe('NotesService.duplicate', () => {
+  const USER = 'user-1';
+  const SOURCE = 'note-1';
+  let attachmentsDir: string;
+  let service: NotesService;
+
+  beforeEach(async () => {
+    attachmentsDir = await fs.mkdtemp(path.join(os.tmpdir(), 'anchor-copy-'));
+    await fs.mkdir(path.join(attachmentsDir, SOURCE));
+    await fs.writeFile(path.join(attachmentsDir, SOURCE, 'photo.png'), 'png');
+    const prisma = {
+      $transaction: () => Promise.reject(new Error('database went away')),
+      note: {
+        findUniqueOrThrow: vi.fn().mockResolvedValue({
+          id: SOURCE,
+          title: 'Groceries',
+          content: null,
+          background: null,
+          tags: [],
+          attachments: [
+            {
+              noteId: SOURCE,
+              type: 'image',
+              originalFilename: 'photo.png',
+              storedFilename: 'photo.png',
+              mimeType: 'image/png',
+              fileSize: 3,
+              position: 0,
+            },
+          ],
+        }),
+      },
+    } as unknown as PrismaService;
+    const noteAccess = {
+      hasNoteAccess: vi
+        .fn()
+        .mockResolvedValue({ hasAccess: true, isOwner: true, state: 'active' }),
+    } as unknown as NoteAccessService;
+    service = new NotesService(
+      prisma,
+      noteAccess,
+      new NoteAttachmentsService(
+        prisma,
+        noteAccess,
+        asSyncEmitter(createMockSyncEmitter()),
+        { attachmentsDir } as never,
+      ),
+      {} as unknown as NoteSharesService,
+      asSyncEmitter(createMockSyncEmitter()),
+      asNoteRevisions(createMockNoteRevisions()),
+    );
+  });
+
+  afterEach(() => fs.rm(attachmentsDir, { recursive: true, force: true }));
+
+  it('removes the copied files when the copy cannot be saved', async () => {
+    await expect(service.duplicate(USER, SOURCE)).rejects.toThrow(
+      'database went away',
+    );
+
+    expect(await fs.readdir(attachmentsDir)).toEqual([SOURCE]);
   });
 });
