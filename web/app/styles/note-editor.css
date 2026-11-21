@@ -288,28 +288,6 @@ textarea.n-title {
   margin: 0 --spacing(1.5) 0 --spacing(1);
   font-variant-numeric: tabular-nums;
 }
-.find-bar button {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 0;
-  border-radius: calc(var(--radius-md) - 3px);
-  background: transparent;
-  color: var(--foreground);
-  cursor: pointer;
-}
-@media (hover: hover) {
-  .find-bar button:hover {
-    background: color-mix(in srgb, var(--foreground) 9%, transparent);
-  }
-}
-.find-bar button svg {
-  width: 16px;
-  height: 16px;
-}
 @media (forced-colors: active) {
   ::highlight(search-match) {
     background-color: Mark;

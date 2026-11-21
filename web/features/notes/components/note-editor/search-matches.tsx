@@ -2,6 +2,7 @@
 
 import { ArrowDown, ArrowUp, X } from "lucide-react";
 import * as React from "react";
+import { IconButton } from "@/components/ui/button";
 import { Tip } from "@/components/ui/tooltip";
 import { useRovingFocus } from "@/lib/hooks/use-roving-focus";
 import { prefersReducedMotion } from "@/lib/motion";
@@ -197,9 +198,9 @@ export function SearchMatchesBar({
     onClick: (e: React.MouseEvent) => void,
   ) => (
     <Tip label={label}>
-      <button type="button" aria-label={label} onClick={onClick}>
+      <IconButton size="sm" label={label} onClick={onClick}>
         {icon}
-      </button>
+      </IconButton>
     </Tip>
   );
   return (
