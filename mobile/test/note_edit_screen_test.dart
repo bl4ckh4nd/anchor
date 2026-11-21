@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:anchor/app/app_bootstrap.dart';
 import 'package:anchor/core/network/connectivity_provider.dart';
 import 'package:anchor/core/network/server_config_provider.dart';
 import 'package:anchor/core/session/active_user_id_provider.dart';
@@ -10,6 +11,7 @@ import 'package:anchor/core/widgets/grouped_list.dart';
 import 'package:anchor/features/notes/data/repository/note_attachments_repository.dart';
 import 'package:anchor/features/notes/data/repository/notes_repository.dart';
 import 'package:anchor/features/notes/domain/note.dart';
+import 'package:anchor/features/notes/presentation/editor/checklist_fold.dart';
 import 'package:anchor/features/notes/presentation/editor/document_lines.dart';
 import 'package:anchor/features/notes/presentation/editor/editor_format.dart';
 import 'package:anchor/features/notes/presentation/editor/editor_tool_button.dart';
@@ -108,10 +110,14 @@ void main() {
     bool opensFromList = false,
     String? tagFilter,
     String searchQuery = '',
+    List<String> foldedNotes = const [],
   }) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          appBootstrapProvider.overrideWithValue(
+            AppBootstrap(foldedChecklistNotes: foldedNotes),
+          ),
           notesRepositoryProvider.overrideWithValue(notesRepo),
           tagsRepositoryProvider.overrideWithValue(tagsRepo),
           noteAttachmentsRepositoryProvider.overrideWithValue(attachmentsRepo),
@@ -456,6 +462,64 @@ void main() {
 
     testWidgets('shows no bar when nothing matches', (tester) async {
       await pumpScreen(tester, note: note, searchQuery: 'valve');
+      await tester.pumpAndSettle();
+
+      expect(barButton('Next match'), findsNothing);
+    });
+
+    String checklist(List<(String, String)> items) => jsonEncode({
+      'ops': [
+        for (final (text, list) in items) ...[
+          {'insert': text},
+          {
+            'insert': '\n',
+            'attributes': {'list': list},
+          },
+        ],
+      ],
+    });
+
+    testWidgets('counts no match in folded checked items until they unfold', (
+      tester,
+    ) async {
+      when(
+        () => prefsRepo.setFoldedChecklistNotes(any()),
+      ).thenAnswer((_) async {});
+      final groceries = Note(
+        id: 'n1',
+        title: 'Groceries',
+        content: checklist([
+          ('Oat milk', 'unchecked'),
+          ('Whole milk', 'checked'),
+        ]),
+      );
+      await pumpScreen(
+        tester,
+        note: groceries,
+        searchQuery: 'milk',
+        foldedNotes: ['n1'],
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('1 of 1'), findsOneWidget);
+
+      await tester.tap(find.byType(CheckedFoldRow));
+      await tester.pumpAndSettle();
+
+      expect(find.text('1 of 2'), findsOneWidget);
+    });
+
+    testWidgets('shows no bar when the only match is folded', (tester) async {
+      final groceries = Note(
+        id: 'n1',
+        title: 'Groceries',
+        content: checklist([('Eggs', 'unchecked'), ('Milk', 'checked')]),
+      );
+      await pumpScreen(
+        tester,
+        note: groceries,
+        searchQuery: 'milk',
+        foldedNotes: ['n1'],
+      );
       await tester.pumpAndSettle();
 
       expect(barButton('Next match'), findsNothing);

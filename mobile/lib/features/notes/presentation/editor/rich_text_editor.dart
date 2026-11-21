@@ -259,6 +259,7 @@ class RichTextEditorState extends State<RichTextEditor>
     _isFolded = isFolded;
     _refreshLists();
     _repaintMarks();
+    _findSearchMatchesSoon();
     setState(() {});
     widget.onCheckedFoldChanged?.call(isFolded);
   }
@@ -292,10 +293,17 @@ class RichTextEditorState extends State<RichTextEditor>
     widget.onBlankChanged?.call(isBlank);
   }
 
+  /// Folded checked items aren't on screen: nothing to show or step to.
   void _findSearchMatches() {
     final matches = widget.searchQuery.trim().isEmpty
         ? const <TextRange>[]
-        : findMatches(_controller.document.toPlainText(), widget.searchQuery);
+        : [
+            for (final match in findMatches(
+              _controller.document.toPlainText(),
+              widget.searchQuery,
+            ))
+              if (!_lists.isFolded(match.start)) match,
+          ];
     final changed = matches.length != _searchMatches.length;
     _searchMatches = matches;
     if (changed) widget.onSearchMatches?.call(matches.length);
@@ -342,8 +350,10 @@ class RichTextEditorState extends State<RichTextEditor>
     if (widget.isCheckedFolded != oldWidget.isCheckedFolded) {
       _isFolded = widget.isCheckedFolded;
       _refreshLists();
+      _findSearchMatchesSoon();
     } else if (widget.sortChecklistItems != oldWidget.sortChecklistItems) {
       _refreshLists();
+      _findSearchMatchesSoon();
     }
     if (widget.searchQuery != oldWidget.searchQuery) _findSearchMatchesSoon();
     if (widget.searchIndex != oldWidget.searchIndex) _repaintMarks();
