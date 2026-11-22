@@ -148,6 +148,8 @@ interface RichTextEditorProps {
   placeholder?: string;
   readOnly?: boolean;
   onAddAttachment?: () => void;
+  /** Between the toolbar and the text. */
+  above?: React.ReactNode;
   below?: React.ReactNode;
   noteId?: string;
   firstLine?: FirstLineHandlers;
@@ -180,6 +182,7 @@ export const RichTextEditor = forwardRef<
       placeholder = "Start typing...",
       readOnly = false,
       onAddAttachment,
+      above,
       below,
       noteId,
       firstLine,
@@ -873,6 +876,7 @@ export const RichTextEditor = forwardRef<
             onUndoRedo={undoOrRedo}
           />
         )}
+        {above}
         <div
           ref={setEditorContainerEl}
           className={cn("anchor-quill", readOnly && "read-only")}

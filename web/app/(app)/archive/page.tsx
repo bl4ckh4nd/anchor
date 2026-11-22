@@ -16,6 +16,7 @@ import {
   restoreNote,
   unarchiveNote,
 } from "@/features/notes/api";
+import { noteHref } from "@/features/notes/columns";
 import {
   NoSearchResults,
   NoteListActions,
@@ -173,6 +174,7 @@ export default function ArchivePage() {
           <NotesBoard
             ref={list.boardRef}
             layout={list.layout}
+            noteHref={(id) => noteHref(id, null, list.query)}
             picking={list.picking}
             picked={list.picked}
             onPick={list.onPick}

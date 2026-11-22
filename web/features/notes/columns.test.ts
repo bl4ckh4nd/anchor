@@ -48,4 +48,10 @@ describe("noteHref", () => {
   it("is the plain note address without a tag", () => {
     expect(noteHref("n1", null)).toBe("/notes/n1");
   });
+
+  it("carries the search, so the note can show its matches", () => {
+    expect(noteHref("n1", null, "bias probe")).toBe("/notes/n1?q=bias%20probe");
+    expect(noteHref("n1", "t1", "a&b")).toBe("/notes/n1?tagId=t1&q=a%26b");
+    expect(noteHref("n1", null, "  ")).toBe("/notes/n1");
+  });
 });

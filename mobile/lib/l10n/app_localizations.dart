@@ -4204,6 +4204,36 @@ abstract class AppLocalizations {
   /// **'Title'**
   String get noteTitleHint;
 
+  /// The search a note was opened from, in the bar that steps through its matches in the note.
+  ///
+  /// In en, this message translates to:
+  /// **'“{query}”'**
+  String noteSearchTerm(String query);
+
+  /// Which search match in the note is the current one, and how many there are.
+  ///
+  /// In en, this message translates to:
+  /// **'{current} of {total}'**
+  String noteSearchCount(int current, int total);
+
+  /// Screen reader label of the button that goes to the previous search match in the note.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous match'**
+  String get noteSearchPrevious;
+
+  /// Screen reader label of the button that goes to the next search match in the note.
+  ///
+  /// In en, this message translates to:
+  /// **'Next match'**
+  String get noteSearchNext;
+
+  /// Screen reader label of the button that hides the search matches in the note.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop highlighting'**
+  String get noteSearchStop;
+
   /// Section label in the view options sheet for the sort direction.
   ///
   /// In en, this message translates to:

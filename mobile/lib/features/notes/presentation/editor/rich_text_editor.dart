@@ -33,6 +33,7 @@ import 'line_kind.dart';
 import 'list_markers.dart';
 import 'markdown_shortcuts.dart';
 import 'plain_insert_rule.dart';
+import 'search_matches.dart';
 import 'slash_hint.dart';
 
 /// Doesn't scroll by itself; the note page scrolls it.
@@ -58,6 +59,9 @@ class RichTextEditor extends StatefulWidget {
     this.isCheckedFolded = false,
     this.onCheckedFoldChanged,
     this.visibleArea,
+    this.searchQuery = '',
+    this.searchIndex = -1,
+    this.onSearchMatches,
   });
 
   final String? initialContent;
@@ -97,6 +101,15 @@ class RichTextEditor extends StatefulWidget {
   /// In global coordinates; null falls back to the scroll view's edges.
   final Rect? Function()? visibleArea;
 
+  /// Matches of this in the text are filled in, without changing it.
+  final String searchQuery;
+
+  /// The current match, or -1.
+  final int searchIndex;
+
+  /// How many matches the text has, each time that changes.
+  final ValueChanged<int>? onSearchMatches;
+
   @override
   State<RichTextEditor> createState() => RichTextEditorState();
 }
@@ -126,6 +139,7 @@ class RichTextEditorState extends State<RichTextEditor>
   ListLines _lists = ListLines.empty;
   late bool _isFolded = widget.isCheckedFolded;
   UndoableEdit? _undoable;
+  List<TextRange> _searchMatches = const [];
 
   /// Quill keeps this much under the caret on its own.
   static const double _caretMargin = AnchorTokens.space8;
@@ -172,6 +186,7 @@ class RichTextEditorState extends State<RichTextEditor>
     _refreshLists();
     _listen();
     widget.focusNode.addListener(_onFocusChanged);
+    _findSearchMatchesSoon();
     _repaintMarks();
   }
 
@@ -181,6 +196,7 @@ class RichTextEditorState extends State<RichTextEditor>
       _followUndoable(change);
       _refreshLists();
       widget.onChanged?.call();
+      _findSearchMatches();
       _repaintMarks();
       _sorter.handleChange(change);
       _checkBlank();
@@ -243,6 +259,7 @@ class RichTextEditorState extends State<RichTextEditor>
     _isFolded = isFolded;
     _refreshLists();
     _repaintMarks();
+    _findSearchMatchesSoon();
     setState(() {});
     widget.onCheckedFoldChanged?.call(isFolded);
   }
@@ -276,6 +293,47 @@ class RichTextEditorState extends State<RichTextEditor>
     widget.onBlankChanged?.call(isBlank);
   }
 
+  /// Folded checked items aren't on screen: nothing to show or step to.
+  void _findSearchMatches() {
+    final matches = widget.searchQuery.trim().isEmpty
+        ? const <TextRange>[]
+        : [
+            for (final match in findMatches(
+              _controller.document.toPlainText(),
+              widget.searchQuery,
+            ))
+              if (!_lists.isFolded(match.start)) match,
+          ];
+    final changed = matches.length != _searchMatches.length;
+    _searchMatches = matches;
+    if (changed) widget.onSearchMatches?.call(matches.length);
+  }
+
+  /// The parent may be building now.
+  void _findSearchMatchesSoon() =>
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _findSearchMatches();
+        _repaintMarks();
+      });
+
+  /// The search match's line, in global coordinates; null before layout.
+  Rect? searchMatchRect(int index) {
+    final editor = _renderEditor;
+    if (editor == null || !editor.attached || index >= _searchMatches.length) {
+      return null;
+    }
+    final match = _searchMatches[index];
+    final start = editor.getLocalRectForCaret(
+      TextPosition(offset: match.start),
+    );
+    final end = editor.getLocalRectForCaret(
+      TextPosition(offset: match.end, affinity: TextAffinity.upstream),
+    );
+    return editor.localToGlobal(start.topLeft) &
+        Size(math.max(1, end.right - start.left), end.bottom - start.top);
+  }
+
   /// Paint runs after layout in the same frame: the marks read the new lines.
   void _repaintMarks() => _paintTick.value++;
 
@@ -292,9 +350,13 @@ class RichTextEditorState extends State<RichTextEditor>
     if (widget.isCheckedFolded != oldWidget.isCheckedFolded) {
       _isFolded = widget.isCheckedFolded;
       _refreshLists();
+      _findSearchMatchesSoon();
     } else if (widget.sortChecklistItems != oldWidget.sortChecklistItems) {
       _refreshLists();
+      _findSearchMatchesSoon();
     }
+    if (widget.searchQuery != oldWidget.searchQuery) _findSearchMatchesSoon();
+    if (widget.searchIndex != oldWidget.searchIndex) _repaintMarks();
     if (widget.initialContent != oldWidget.initialContent ||
         widget.contentVersion != oldWidget.contentVersion) {
       // The new text notifies the toolbar, which can't rebuild mid-build.
@@ -324,6 +386,7 @@ class RichTextEditorState extends State<RichTextEditor>
       );
       _listen();
     });
+    _findSearchMatches();
     _checkBlank();
   }
 
@@ -960,6 +1023,8 @@ class RichTextEditorState extends State<RichTextEditor>
                   isDragged: _isDragged,
                   typography: context.noteTypography,
                   textScaler: MediaQuery.textScalerOf(context),
+                  searchMatches: _searchMatches,
+                  searchIndex: widget.searchIndex,
                 ),
               ),
             ),

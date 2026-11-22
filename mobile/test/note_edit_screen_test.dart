@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:anchor/app/app_bootstrap.dart';
 import 'package:anchor/core/network/connectivity_provider.dart';
 import 'package:anchor/core/network/server_config_provider.dart';
 import 'package:anchor/core/session/active_user_id_provider.dart';
@@ -12,6 +13,7 @@ import 'package:anchor/features/notes/data/repository/note_copier.dart';
 import 'package:anchor/features/notes/data/repository/notes_repository.dart';
 import 'package:anchor/features/notes/domain/note.dart';
 import 'package:anchor/features/notes/domain/note_attachment.dart';
+import 'package:anchor/features/notes/presentation/editor/checklist_fold.dart';
 import 'package:anchor/features/notes/presentation/editor/document_lines.dart';
 import 'package:anchor/features/notes/presentation/editor/editor_format.dart';
 import 'package:anchor/features/notes/presentation/editor/editor_tool_button.dart';
@@ -114,12 +116,17 @@ void main() {
     bool isOnlyPage = false,
     bool opensFromList = false,
     String? tagFilter,
+    String searchQuery = '',
+    List<String> foldedNotes = const [],
     bool isOnline = true,
     NoteCopier? copier,
   }) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          appBootstrapProvider.overrideWithValue(
+            AppBootstrap(foldedChecklistNotes: foldedNotes),
+          ),
           notesRepositoryProvider.overrideWithValue(notesRepo),
           tagsRepositoryProvider.overrideWithValue(tagsRepo),
           noteAttachmentsRepositoryProvider.overrideWithValue(attachmentsRepo),
@@ -150,7 +157,11 @@ void main() {
             routes: [
               GoRoute(
                 path: '/only',
-                builder: (_, _) => NoteEditScreen(note: note, noteId: note?.id),
+                builder: (_, _) => NoteEditScreen(
+                  note: note,
+                  noteId: note?.id,
+                  searchQuery: searchQuery,
+                ),
               ),
               GoRoute(
                 path: '/',
@@ -158,8 +169,11 @@ void main() {
                 routes: [
                   GoRoute(
                     path: 'note',
-                    builder: (_, _) =>
-                        NoteEditScreen(note: note, noteId: note?.id),
+                    builder: (_, _) => NoteEditScreen(
+                      note: note,
+                      noteId: note?.id,
+                      searchQuery: searchQuery,
+                    ),
                   ),
                   GoRoute(
                     path: 'note/:id',
@@ -411,6 +425,154 @@ void main() {
     await leaveNote(tester);
 
     verifyNever(() => notesRepo.updateNote(any()));
+  });
+
+  group('opened from a search', () {
+    const note = Note(
+      id: 'n1',
+      title: 'Bias probe log',
+      content:
+          '{"ops":[{"insert":"Check the bias probe.\\nOrder a BIAS PROBE.\\n"}]}',
+    );
+
+    testWidgets('steps through the matches in the title and text, and '
+        'changes nothing in the note', (tester) async {
+      await pumpScreen(tester, note: note, searchQuery: ' bias probe ');
+      await tester.pumpAndSettle();
+      final before = editorController(tester).document.toDelta();
+
+      expect(find.text('“bias probe”'), findsOneWidget);
+      expect(find.text('1 of 3'), findsOneWidget);
+      await tester.tap(barButton('Next match'));
+      await tester.pump();
+      expect(find.text('2 of 3'), findsOneWidget);
+      await tester.tap(barButton('Previous match'));
+      await tester.pump();
+      await tester.tap(barButton('Previous match'));
+      await tester.pump();
+      expect(find.text('3 of 3'), findsOneWidget);
+      await tester.tap(barButton('Stop highlighting'));
+      await tester.pump();
+
+      expect(barButton('Next match'), findsNothing);
+      expect(editorController(tester).document.toDelta(), before);
+      expect(editorController(tester).document.hasUndo, isFalse);
+      await tester.pump(const Duration(seconds: 3));
+      verifyNever(() => notesRepo.updateNote(any()));
+    });
+
+    testWidgets('typing in the title ends it and keeps what was typed', (
+      tester,
+    ) async {
+      await pumpScreen(tester, note: note, searchQuery: 'bias probe');
+      await tester.pumpAndSettle();
+      expect(find.text('1 of 3'), findsOneWidget);
+
+      await tester.enterText(titleField, 'Bias probe logs');
+      await tester.pump();
+
+      expect(barButton('Next match'), findsNothing);
+      expect(
+        tester.widget<TextField>(titleField).controller!.text,
+        'Bias probe logs',
+      );
+    });
+
+    testWidgets('shows no bar when nothing matches', (tester) async {
+      await pumpScreen(tester, note: note, searchQuery: 'valve');
+      await tester.pumpAndSettle();
+
+      expect(barButton('Next match'), findsNothing);
+    });
+
+    String checklist(List<(String, String)> items) => jsonEncode({
+      'ops': [
+        for (final (text, list) in items) ...[
+          {'insert': text},
+          {
+            'insert': '\n',
+            'attributes': {'list': list},
+          },
+        ],
+      ],
+    });
+
+    testWidgets('counts no match in folded checked items until they unfold', (
+      tester,
+    ) async {
+      when(
+        () => prefsRepo.setFoldedChecklistNotes(any()),
+      ).thenAnswer((_) async {});
+      final groceries = Note(
+        id: 'n1',
+        title: 'Groceries',
+        content: checklist([
+          ('Oat milk', 'unchecked'),
+          ('Whole milk', 'checked'),
+        ]),
+      );
+      await pumpScreen(
+        tester,
+        note: groceries,
+        searchQuery: 'milk',
+        foldedNotes: ['n1'],
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('1 of 1'), findsOneWidget);
+
+      await tester.tap(find.byType(CheckedFoldRow));
+      await tester.pumpAndSettle();
+
+      expect(find.text('1 of 2'), findsOneWidget);
+    });
+
+    testWidgets('steps from the match shown after folding drops some', (
+      tester,
+    ) async {
+      when(
+        () => prefsRepo.setFoldedChecklistNotes(any()),
+      ).thenAnswer((_) async {});
+      final groceries = Note(
+        id: 'n1',
+        title: 'Groceries',
+        content: checklist([
+          ('Oat milk', 'unchecked'),
+          ('Soy milk', 'unchecked'),
+          ('Whole milk', 'checked'),
+        ]),
+      );
+      await pumpScreen(tester, note: groceries, searchQuery: 'milk');
+      await tester.pumpAndSettle();
+      await tester.tap(barButton('Next match'));
+      await tester.tap(barButton('Next match'));
+      await tester.pumpAndSettle();
+      expect(find.text('3 of 3'), findsOneWidget);
+
+      await tester.tap(find.byType(CheckedFoldRow));
+      await tester.pumpAndSettle();
+      expect(find.text('2 of 2'), findsOneWidget);
+
+      await tester.tap(barButton('Previous match'));
+      await tester.pumpAndSettle();
+      expect(find.text('1 of 2'), findsOneWidget);
+    });
+
+    testWidgets('shows no bar when the only match is folded', (tester) async {
+      final groceries = Note(
+        id: 'n1',
+        title: 'Groceries',
+        content: checklist([('Eggs', 'unchecked'), ('Milk', 'checked')]),
+      );
+      await pumpScreen(
+        tester,
+        note: groceries,
+        searchQuery: 'milk',
+        foldedNotes: ['n1'],
+      );
+      await tester.pumpAndSettle();
+
+      expect(barButton('Next match'), findsNothing);
+    });
   });
 
   testWidgets('a read-only note with no title shows Untitled, not a field', (
