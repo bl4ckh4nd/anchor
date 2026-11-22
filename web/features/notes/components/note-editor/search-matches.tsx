@@ -115,6 +115,12 @@ export function useSearchMatches(
   query: string,
 ) {
   const [stoppedFor, setStoppedFor] = React.useState<string | null>(null);
+  // A new search starts afresh, even one for the term stopped before.
+  const [lastQuery, setLastQuery] = React.useState(query);
+  if (query !== lastQuery) {
+    setLastQuery(query);
+    setStoppedFor(null);
+  }
   // Kept with the search they were found for, so a new search starts empty.
   const [found, setFound] = React.useState<{ query: string; ranges: Range[] }>({
     query: "",
