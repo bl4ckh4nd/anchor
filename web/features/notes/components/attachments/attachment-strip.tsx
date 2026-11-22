@@ -45,9 +45,16 @@ const usePendingDeletes = create<{
     }),
 }));
 
-/** Per note: deletions still showing their Undo toast, and uploads under way. */
+/** Per note: deletions still showing their Undo toast, uploads under way, and uploads that failed. */
 const deletesWaiting = new Map<string, Set<string>>();
 const attachmentWork = new Map<string, Set<Promise<unknown>>>();
+const uploadsFailed = new Map<string, Set<string>>();
+
+/** An upload tile is gone, or went through: it no longer stands for a missing file. */
+function forgetFailedUpload(key: string) {
+  for (const [noteId, keys] of uploadsFailed)
+    if (keys.delete(key) && !keys.size) uploadsFailed.delete(noteId);
+}
 
 function inSet<T>(map: Map<string, Set<T>>, noteId: string) {
   const set = map.get(noteId) ?? new Set<T>();
@@ -67,12 +74,16 @@ function track<T>(noteId: string, work: Promise<T>) {
   return work;
 }
 
-/** Sends the note's waiting file deletions now, then waits for them and its uploads. */
+/**
+ * Sends the note's waiting file deletions now, then waits for them and its
+ * uploads. False while a file shown on the note failed to upload.
+ */
 export async function attachmentsSettled(noteId: string) {
   for (const toastId of [...(deletesWaiting.get(noteId) ?? [])])
     toast.dismiss(toastId);
   while (attachmentWork.get(noteId)?.size)
     await Promise.allSettled(attachmentWork.get(noteId) ?? []);
+  return !uploadsFailed.get(noteId)?.size;
 }
 
 interface Drag {
@@ -227,7 +238,10 @@ export function AttachmentStrip({
     isMounted.current = true;
     return () => {
       isMounted.current = false;
-      for (const u of uploadsRef.current) if (u.preview) releaseBlobUrl(u.file);
+      for (const u of uploadsRef.current) {
+        forgetFailedUpload(u.key);
+        if (u.preview) releaseBlobUrl(u.file);
+      }
     };
   }, []);
 
@@ -243,6 +257,7 @@ export function AttachmentStrip({
   };
 
   const removeUpload = (upload: Upload) => {
+    forgetFailedUpload(upload.key);
     flip.prepare();
     setUploads((list) => list.filter((x) => x.key !== upload.key));
     letGo(upload);
@@ -265,11 +280,13 @@ export function AttachmentStrip({
         ["attachments", id],
         (list = []) => [saved, ...list.filter((a) => a.id !== saved.id)],
       );
+      forgetFailedUpload(upload.key);
       setUploads((list) => list.filter((x) => x.key !== upload.key));
       letGo(upload);
       return "added";
     } catch {
       if (signal.aborted) return "canceled";
+      inSet(uploadsFailed, id).add(upload.key);
       patch(upload.key, { failed: true, progress: null });
       return "failed";
     }

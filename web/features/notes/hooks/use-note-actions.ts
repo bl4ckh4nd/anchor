@@ -102,7 +102,8 @@ export function useNoteActions({
       // A copy of text the server hasn't got yet would lose it.
       if (!(await flushEdits())) throw new Error("Edits not saved");
       // Files deleted or added on screen must be so on the server too.
-      await attachmentsSettled(noteId);
+      if (!(await attachmentsSettled(noteId)))
+        throw new Error("Files not uploaded");
       return duplicateNote(noteId);
     },
     onSuccess: (copy) => {
