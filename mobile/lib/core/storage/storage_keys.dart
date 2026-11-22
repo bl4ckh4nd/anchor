@@ -11,6 +11,7 @@ class StorageKeys {
   static const displayDensity = 'display_density';
   static const showCardPictures = 'notes_show_card_pictures';
   static const sortChecklistItems = 'editor_sort_checklist_items';
+  static const startNewNotesInBody = 'editor_start_in_body';
   static const foldedChecklistNotes = 'editor_folded_checklist_notes';
   static const noteFont = 'editor_note_face';
   static const noteTextSize = 'editor_note_text_size';

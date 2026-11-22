@@ -153,7 +153,7 @@ function extractAttachments(
   const attachments: CanonicalAttachment[] = [];
   const skipped: ImportSkippedItem[] = [];
   const seen = new Set<string>();
-  const touched = new Set<number>();
+  const touched = new Map<number, AttachmentRef[]>();
 
   for (const ref of refs) {
     const resolved = resolveRef(ref, fromDir, zip);
@@ -185,8 +185,9 @@ function extractAttachments(
       continue;
     }
 
-    lines[ref.line] = lines[ref.line].replace(ref.raw, "");
-    touched.add(ref.line);
+    const removals = touched.get(ref.line);
+    if (removals) removals.push(ref);
+    else touched.set(ref.line, [ref]);
 
     if (seen.has(resolved)) continue;
     seen.add(resolved);
@@ -198,6 +199,14 @@ function extractAttachments(
     });
   }
 
+  for (const [index, removals] of touched) {
+    for (const { column, raw } of removals.sort(
+      (a, b) => b.column - a.column,
+    )) {
+      lines[index] =
+        lines[index].slice(0, column) + lines[index].slice(column + raw.length);
+    }
+  }
   const kept = lines.filter(
     (line, index) => !(touched.has(index) && !line.trim()),
   );

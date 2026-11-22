@@ -31,6 +31,7 @@ import 'package:anchor/features/notes/presentation/widgets/picture_tile.dart';
 import 'package:anchor/features/notes/presentation/widgets/read_only_bottom_bar.dart';
 import 'package:anchor/features/reminders/data/notification_gateway.dart';
 import 'package:anchor/features/reminders/domain/reminder_schedule.dart';
+import 'package:anchor/features/settings/domain/editor_preferences.dart';
 import 'package:anchor/features/tags/data/repository/tags_repository.dart';
 import 'package:anchor/features/tags/domain/tag.dart';
 import 'package:anchor/features/tags/presentation/tags_controller.dart';
@@ -115,6 +116,7 @@ void main() {
     Note? note,
     bool isOnlyPage = false,
     bool opensFromList = false,
+    bool startNewNotesInBody = false,
     String? tagFilter,
     String searchQuery = '',
     List<String> foldedNotes = const [],
@@ -125,7 +127,12 @@ void main() {
       ProviderScope(
         overrides: [
           appBootstrapProvider.overrideWithValue(
-            AppBootstrap(foldedChecklistNotes: foldedNotes),
+            AppBootstrap(
+              foldedChecklistNotes: foldedNotes,
+              editorPreferences: EditorPreferences(
+                startNewNotesInBody: startNewNotesInBody,
+              ),
+            ),
           ),
           notesRepositoryProvider.overrideWithValue(notesRepo),
           tagsRepositoryProvider.overrideWithValue(tagsRepo),
@@ -265,6 +272,36 @@ void main() {
     expect(tester.widget<TextField>(titleField).focusNode!.hasFocus, isTrue);
     await tester.pumpAndSettle();
   });
+
+  testWidgets(
+    'body-first preference sends the first typed text to a new note body',
+    (tester) async {
+      await pumpScreen(tester, opensFromList: true, startNewNotesInBody: true);
+      GoRouter.of(tester.element(find.text('Notes'))).push('/note');
+      await tester.pump();
+      await tester.pump();
+
+      final title = tester.widget<TextField>(titleField);
+      expect(title.focusNode!.hasFocus, isFalse);
+      final editor = tester.state<RichTextEditorState>(
+        find.byType(RichTextEditor),
+      );
+      expect(editor.hasFocus, isTrue);
+      expect(tester.testTextInput.isVisible, isTrue);
+      final value = editor.controller.plainTextEditingValue;
+      tester.testTextInput.updateEditingValue(
+        TextEditingValue(
+          text: 'Body first${value.text}',
+          selection: const TextSelection.collapsed(offset: 10),
+        ),
+      );
+      await tester.pump();
+      expect(editor.getPlainText(), 'Body first');
+      expect(title.controller!.text, isEmpty);
+      await tester.pumpAndSettle();
+      await leaveNote(tester);
+    },
+  );
 
   testWidgets('on iPhone, Back on a note that is the only page opens the '
       'notes list', (tester) async {

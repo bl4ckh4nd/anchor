@@ -742,6 +742,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Checked items move below the unchecked ones.';
 
   @override
+  String get settingsStartNewNotesInBody => 'Start new notes in the body';
+
+  @override
   String get settingsPreviewTitle => 'Weekend in Lisbon';
 
   @override

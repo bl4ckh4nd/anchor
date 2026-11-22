@@ -126,10 +126,13 @@ describe("parseInline", () => {
     expect(parseInline("<mark>open")).toEqual([{ insert: "<mark>open" }]);
   });
 
-  it("keeps == inside inline code and code blocks as text", () => {
-    expect(parseInline("`a ==b==` c")).toEqual([{ insert: "a ==b== c" }]);
+  it("keeps == inside inline code and code blocks literal", () => {
+    expect(parseInline("`a ==b==` c")).toEqual([
+      { insert: "a ==b==", attributes: { code: true } },
+      { insert: " c" },
+    ]);
     expect(parseInline("==`a==b`==")).toEqual([
-      { insert: "a==b", attributes: { highlight: "yellow" } },
+      { insert: "a==b", attributes: { code: true, highlight: "yellow" } },
     ]);
     expect(markdownToDelta(lines("```", "==b==", "```")).ops).toEqual([
       { insert: "==b==" },
@@ -137,11 +140,15 @@ describe("parseInline", () => {
     ]);
   });
 
-  it("keeps inline code as plain text", () => {
+  it("preserves inline code formatting and literal punctuation", () => {
     expect(parseInline("run `npm test` now")).toEqual([
-      { insert: "run npm test now" },
+      { insert: "run " },
+      { insert: "npm test", attributes: { code: true } },
+      { insert: " now" },
     ]);
-    expect(parseInline("`a * b`")).toEqual([{ insert: "a * b" }]);
+    expect(parseInline("`a * b`")).toEqual([
+      { insert: "a * b", attributes: { code: true } },
+    ]);
   });
 
   it("unescapes backslash escapes and entities", () => {

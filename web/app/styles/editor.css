@@ -138,6 +138,15 @@
   border-top-right-radius: 0;
 }
 
+.anchor-quill .ql-editor code,
+.doc :not(pre) > code {
+  border-radius: var(--radius-xs);
+  background: var(--note-surface);
+  padding: 0 --spacing(1);
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+}
+
 /* Code blocks */
 .anchor-quill .ql-editor .ql-code-block-container {
   position: relative;
