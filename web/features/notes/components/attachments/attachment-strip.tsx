@@ -494,7 +494,8 @@ export function AttachmentStrip({
         reorderAttachments(noteId as string, ids),
       );
       lastOrderSent.current = sending.catch(() => {});
-      return sending;
+      // A copy made meanwhile waits for the order shown.
+      return noteId ? track(noteId, sending) : sending;
     },
     onError: (_error, { before }) => {
       queryClient.setQueryData(["attachments", noteId], before);
