@@ -170,7 +170,22 @@ export function NoteEditorContent(props: NoteEditorContentProps) {
     );
 
   return (
-    <div ref={root} className="note-in">
+    <div
+      ref={root}
+      className="note-in"
+      onPasteCapture={(e) => {
+        if (!props.canUpload || !(e.target instanceof HTMLElement)) return;
+        const field = e.target.closest("textarea.n-title, .ql-editor");
+        if (!field || !e.currentTarget.contains(field)) return;
+        const images = Array.from(e.clipboardData.files).filter((file) =>
+          file.type.startsWith("image/"),
+        );
+        if (!images.length) return;
+        e.preventDefault();
+        e.stopPropagation();
+        strip.current?.add(images);
+      }}
+    >
       {props.readOnlyBar}
       {props.readOnly ? (
         <h1 className="n-title" data-find={props.title ? "" : undefined}>
