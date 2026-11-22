@@ -119,6 +119,7 @@ export const QUILL_FORMATS = [
   "list", // ordered, bullet, checked/unchecked
   "indent",
   "blockquote",
+  "code",
   "code-block",
   "link",
   "highlight",

@@ -14,6 +14,7 @@ type Marks = {
   italic?: true;
   underline?: true;
   strike?: true;
+  code?: true;
   highlight?: string;
   link?: string;
 };
@@ -44,6 +45,7 @@ function attributesOf(marks: Marks): Record<string, unknown> | null {
   if (marks.italic) attrs.italic = true;
   if (marks.underline) attrs.underline = true;
   if (marks.strike) attrs.strike = true;
+  if (marks.code) attrs.code = true;
   if (marks.highlight) attrs.highlight = marks.highlight;
   if (marks.link) attrs.link = marks.link;
   return Object.keys(attrs).length ? attrs : null;
@@ -143,6 +145,13 @@ function indexOfClose(text: string, close: string, from: number): number {
   return -1;
 }
 
+function closingBackticks(text: string, from: number, length: number): number {
+  for (const match of text.slice(from).matchAll(/`+/g)) {
+    if (match[0].length === length) return from + match.index;
+  }
+  return -1;
+}
+
 /** Matches `==text==` at [start]; the closing `==` can't sit in code or a link. */
 function matchHighlight(
   text: string,
@@ -156,7 +165,7 @@ function matchHighlight(
       i++;
     } else if (char === "`") {
       const run = /^`+/.exec(text.slice(i))?.[0] ?? "`";
-      const close = text.indexOf(run, i + run.length);
+      const close = closingBackticks(text, i + run.length, run.length);
       i = (close === -1 ? i : close) + run.length - 1;
     } else if (char === "[") {
       const link = matchLink(text, i);
@@ -266,17 +275,20 @@ function scanInline(text: string, marks: Marks, ops: QuillOp[]): void {
 
     if (char === "`") {
       const run = /^`+/.exec(rest)?.[0] ?? "`";
-      const close = text.indexOf(run, i + run.length);
+      const close = closingBackticks(text, i + run.length, run.length);
       if (close !== -1) {
-        // The editor has no inline code format, so keep the text itself
         let inner = text.slice(i + run.length, close);
         if (inner.startsWith(" ") && inner.endsWith(" ") && inner.trim()) {
           inner = inner.slice(1, -1);
         }
-        buffer += inner;
+        flush();
+        pushText(ops, inner, { ...marks, code: true });
         i = close + run.length;
         continue;
       }
+      buffer += run;
+      i += run.length;
+      continue;
     }
 
     if (/^<u>/i.test(rest)) {
@@ -523,8 +535,8 @@ export function markdownToDelta(text: string): QuillDelta {
       continue;
     }
 
-    const opening = FENCE.exec(raw);
-    if (opening && !(opening[1][0] === "`" && opening[2].includes("`"))) {
+    const opening = openingFence(raw);
+    if (opening) {
       flushBlank();
       fence = {
         char: opening[1][0],
@@ -696,6 +708,7 @@ export type AttachmentRef = {
   label: string;
   kind: "image" | "link";
   line: number;
+  column: number;
 };
 
 const IMAGE_REF = /!\[([^\]]*)\]\(([^)]*)\)/g;
@@ -718,55 +731,88 @@ const isLocalTarget = (target: string) =>
   !/^[a-z][a-z0-9+.-]*:/i.test(target) &&
   !target.startsWith("#");
 
-/** Local file references outside code fences, in source order per line. */
+function openingFence(line: string): RegExpExecArray | null {
+  const match = FENCE.exec(line);
+  return match?.[1][0] === "`" && match[2].includes("`") ? null : match;
+}
+
+function codeSpans(line: string): { start: number; end: number }[] {
+  const spans: { start: number; end: number }[] = [];
+  const tokens = /\\[\\`]|`+/g;
+  for (let token = tokens.exec(line); token; token = tokens.exec(line)) {
+    if (token[0][0] !== "`") continue;
+    const close = closingBackticks(line, tokens.lastIndex, token[0].length);
+    if (close === -1) continue;
+    tokens.lastIndex = close + token[0].length;
+    spans.push({ start: token.index, end: tokens.lastIndex });
+  }
+  return spans;
+}
+
+/** Local file references outside inline code and code fences. */
 export function findAttachmentRefs(text: string): AttachmentRef[] {
   const refs: AttachmentRef[] = [];
   const lines = text.split(/\r\n|\r|\n/);
   let fence: { char: string; length: number } | null = null;
 
   lines.forEach((line, index) => {
-    const fenceMatch = FENCE.exec(line);
-    if (fenceMatch) {
-      if (fence && fenceMatch[1][0] === fence.char) fence = null;
-      else if (!fence)
-        fence = { char: fenceMatch[1][0], length: fenceMatch[1].length };
+    if (fence) {
+      const closing = FENCE.exec(line);
+      if (
+        closing &&
+        closing[1][0] === fence.char &&
+        closing[1].length >= fence.length &&
+        !closing[2].trim()
+      )
+        fence = null;
       return;
     }
-    if (fence) return;
+    const opening = openingFence(line);
+    if (opening) {
+      fence = { char: opening[1][0], length: opening[1].length };
+      return;
+    }
+    const spans = codeSpans(line);
+    const outsideCode = (column: number) =>
+      !spans.some(({ start, end }) => start <= column && column < end);
 
     for (const match of line.matchAll(IMAGE_REF)) {
       const target = cleanTarget(match[2]);
-      if (isLocalTarget(target)) {
+      if (isLocalTarget(target) && outsideCode(match.index)) {
         refs.push({
           raw: match[0],
           target,
           label: match[1],
           kind: "image",
           line: index,
+          column: match.index,
         });
       }
     }
     for (const match of line.matchAll(LINK_REF)) {
       const target = cleanTarget(match[3]);
-      if (isLocalTarget(target)) {
+      const column = match.index + match[1].length;
+      if (isLocalTarget(target) && outsideCode(column)) {
         refs.push({
           raw: match[0].slice(match[1].length),
           target,
           label: match[2],
           kind: "link",
           line: index,
+          column,
         });
       }
     }
     for (const match of line.matchAll(EMBED_REF)) {
       const target = cleanTarget(match[1].split("|")[0]);
-      if (isLocalTarget(target)) {
+      if (isLocalTarget(target) && outsideCode(match.index)) {
         refs.push({
           raw: match[0],
           target,
           label: match[1],
           kind: match[0].startsWith("!") ? "image" : "link",
           line: index,
+          column: match.index,
         });
       }
     }

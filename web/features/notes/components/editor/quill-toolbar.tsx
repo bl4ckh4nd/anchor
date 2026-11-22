@@ -16,6 +16,7 @@ import {
   ListOrdered,
   Quote,
   Redo2,
+  SquareCode,
   Strikethrough,
   Underline,
   Undo2,
@@ -340,8 +341,14 @@ export function QuillToolbar({
         { active: !!format.blockquote, toggle: true },
       )}
       {toolButton(
-        "Code block",
+        "Inline code",
         <Code />,
+        () => quill && toggleInlineFormat(quill, "code"),
+        { active: !!format.code, toggle: true, disabled: isInCode },
+      )}
+      {toolButton(
+        "Code block",
+        <SquareCode />,
         () => quill && toggleBlock(quill, "code-block"),
         { active: !!format["code-block"], toggle: true },
       )}

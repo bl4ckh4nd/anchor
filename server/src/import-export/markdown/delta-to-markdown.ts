@@ -23,6 +23,7 @@ type Marks = {
   italic: boolean;
   underline: boolean;
   strike: boolean;
+  code: boolean;
   highlight: string | null;
   link: string | null;
 };
@@ -42,13 +43,14 @@ function marksOf(op: QuillOp): Marks {
     italic: attrs.italic === true,
     underline: attrs.underline === true,
     strike: attrs.strike === true,
+    code: attrs.code === true,
     highlight: highlightOf(attrs.highlight),
     link: typeof attrs.link === 'string' ? attrs.link : null,
   };
 }
 
 const marksKey = (marks: Marks) =>
-  `${marks.bold}|${marks.italic}|${marks.underline}|${marks.strike}|${marks.highlight ?? ''}|${marks.link ?? ''}`;
+  `${marks.bold}|${marks.italic}|${marks.underline}|${marks.strike}|${marks.code}|${marks.highlight ?? ''}|${marks.link ?? ''}`;
 
 /** Escapes characters a markdown reader would treat as formatting. */
 export function escapeInlineText(text: string): string {
@@ -108,15 +110,26 @@ function wrapCore(text: string, wrap: (core: string) => string): string {
 }
 
 function applyMarks(text: string, marks: Marks): string {
-  return wrapCore(text, (core) => {
-    let out = escapeInlineText(core);
+  const wrap = (value: string) => {
+    let out = value;
     if (marks.italic) out = `*${out}*`;
     if (marks.bold) out = `**${out}**`;
     if (marks.underline) out = `<u>${out}</u>`;
     if (marks.strike) out = `~~${out}~~`;
     if (marks.link) out = `[${out}](${encodeLinkDestination(marks.link)})`;
     return out;
-  });
+  };
+  if (marks.code) {
+    const fence = '`'.repeat(longestBacktickRun([text]) + 1);
+    const pad =
+      text.startsWith('`') ||
+      text.endsWith('`') ||
+      (text.startsWith(' ') && text.endsWith(' ') && text.trim())
+        ? ' '
+        : '';
+    return wrap(`${fence}${pad}${text}${pad}${fence}`);
+  }
+  return wrapCore(text, (core) => wrap(escapeInlineText(core)));
 }
 
 function applyHighlight(markdown: string, color: string): string {
