@@ -698,12 +698,12 @@ void main() {
     );
 
     final gesture = await startDrag(tester, checkboxSlot(0));
-    final row = tester.getRect(find.byType(CheckedFoldRow));
+    final row = tester.getRect(find.byType(AddItemRow));
     await dragTo(tester, gesture, Offset(40, row.bottom + 30));
     expect(
       state.checklistDrag.indicatorY,
       moreOrLessEquals(
-        tester.getTopLeft(find.byType(CheckedFoldRow)).dy -
+        tester.getTopLeft(find.byType(AddItemRow)).dy -
             tester.getTopLeft(find.byType(RichTextEditor)).dy,
         epsilon: 0.5,
       ),

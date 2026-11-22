@@ -46,9 +46,10 @@ export function checkedFoldStyles(
     .map(({ block, first, last }) => {
       const list = `${scope} .ql-editor > :nth-child(${block}) >`;
       const firstItem = `${list} li:nth-child(${first})`;
-      if (!isFolded) return `${firstItem}{margin-top:var(--fold-row)}`;
+      if (!isFolded)
+        return `${firstItem}{margin-top:calc(var(--fold-row) * var(--fold-rows))}`;
       return [
-        `${firstItem}{margin-top:var(--fold-row);height:0;padding-block:0;overflow:hidden;visibility:hidden}`,
+        `${firstItem}{margin-top:calc(var(--fold-row) * var(--fold-rows));height:0;padding-block:0;overflow:hidden;visibility:hidden}`,
         last > first
           ? `${list} li:nth-child(n+${first + 1}):nth-child(-n+${last}){display:none}`
           : "",
@@ -56,6 +57,14 @@ export function checkedFoldStyles(
     })
     .join("\n");
 }
+
+/** The delta that puts an empty unchecked item right before the fold's first checked item. */
+export const addItemDelta = (at: number) => ({
+  ops: [
+    ...(at ? [{ retain: at }] : []),
+    { insert: "\n", attributes: { list: "unchecked" } },
+  ],
+});
 
 export const foldCount = (fold: CheckedFold) => fold.last - fold.first + 1;
 

@@ -254,6 +254,20 @@ class RichTextEditorState extends State<RichTextEditor>
     _setFolded(!_isFolded);
   }
 
+  /// At the end of the open items, right before [firstChecked].
+  void _addItem(Line firstChecked) {
+    _consumeNextEditorTap();
+    final offset = firstChecked.documentOffset;
+    _controller.replaceText(
+      offset,
+      0,
+      '\n',
+      TextSelection.collapsed(offset: offset),
+    );
+    _controller.formatText(offset, 0, Attribute.unchecked);
+    widget.focusNode.requestFocus();
+  }
+
   void _setFolded(bool isFolded) {
     if (_isFolded == isFolded) return;
     _isFolded = isFolded;
@@ -823,6 +837,7 @@ class RichTextEditorState extends State<RichTextEditor>
       wasJustChecked: _justCheckedTimers.containsKey,
       isFolded: _isFolded,
       onFold: _toggleFold,
+      onAddItem: () => _addItem(node),
       isDragged: _isDragged(node),
     );
   }

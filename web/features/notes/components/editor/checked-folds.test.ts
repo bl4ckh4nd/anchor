@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  addItemDelta,
   checkedFoldStyles,
   checkedItemsLabel,
   findCheckedFolds,
@@ -32,20 +33,35 @@ describe("findCheckedFolds", () => {
   });
 });
 
+describe("addItemDelta", () => {
+  it("adds an unchecked item at the top when every item is checked", () => {
+    expect(addItemDelta(0).ops).toEqual([
+      { insert: "\n", attributes: { list: "unchecked" } },
+    ]);
+  });
+
+  it("adds it right before the first checked item", () => {
+    expect(addItemDelta(9).ops).toEqual([
+      { retain: 9 },
+      { insert: "\n", attributes: { list: "unchecked" } },
+    ]);
+  });
+});
+
 describe("checkedFoldStyles", () => {
   const scope = '[data-folds="a"]';
   const folds = [{ block: 2, first: 3, last: 5 }];
 
   it("makes room for the row above the first checked item", () => {
     expect(checkedFoldStyles(scope, folds, false)).toBe(
-      '[data-folds="a"] .ql-editor > :nth-child(2) > li:nth-child(3){margin-top:var(--fold-row)}',
+      '[data-folds="a"] .ql-editor > :nth-child(2) > li:nth-child(3){margin-top:calc(var(--fold-row) * var(--fold-rows))}',
     );
   });
 
   it("hides the checked items when folded and keeps the row's room", () => {
     const css = checkedFoldStyles(scope, folds, true);
     expect(css).toContain(
-      "li:nth-child(3){margin-top:var(--fold-row);height:0",
+      "li:nth-child(3){margin-top:calc(var(--fold-row) * var(--fold-rows));height:0",
     );
     expect(css).toContain("li:nth-child(n+4):nth-child(-n+5){display:none}");
   });

@@ -132,6 +132,74 @@ _ListKind? _kindOf(Line line) =>
 bool _isChecked(Line line) =>
     line.style.attributes[Attribute.list.key]?.value == 'checked';
 
+/// A row in the gutter above a checklist's checked items.
+class _FoldRowButton extends StatelessWidget {
+  const _FoldRowButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+    required this.semantics,
+  });
+
+  final Widget icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+  final Widget Function(Widget child) semantics;
+
+  @override
+  Widget build(BuildContext context) {
+    return RawGestureDetector(
+      excludeFromSemantics: true,
+      gestures: {
+        // Holding the row would select the text under it.
+        LongPressGestureRecognizer:
+            GestureRecognizerFactoryWithHandlers<LongPressGestureRecognizer>(
+              LongPressGestureRecognizer.new,
+              (recognizer) => recognizer.onLongPress = () {},
+            ),
+      },
+      child: Pressable(
+        style: PressStyle.plain,
+        onTap: () {
+          Haptics.selection();
+          onTap();
+        },
+        child: semantics(
+          SizedBox(
+            height: AnchorTokens.sizeControlMedium,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: AnchorTokens.space32,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 5),
+                      // off-scale: centers the icon over the checkboxes
+                      child: icon,
+                    ),
+                  ),
+                ),
+                Text(
+                  label,
+                  maxLines: 1,
+                  style: AppTypography.secondary.copyWith(
+                    color: color,
+                    height: 1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class CheckedFoldRow extends StatelessWidget {
   const CheckedFoldRow({
     super.key,
@@ -152,62 +220,42 @@ class CheckedFoldRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final spring = Spring.snappy;
-    return RawGestureDetector(
-      excludeFromSemantics: true,
-      gestures: {
-        // Holding the row would select the text under it.
-        LongPressGestureRecognizer:
-            GestureRecognizerFactoryWithHandlers<LongPressGestureRecognizer>(
-              LongPressGestureRecognizer.new,
-              (recognizer) => recognizer.onLongPress = () {},
-            ),
-      },
-      child: Pressable(
-        style: PressStyle.plain,
-        onTap: () {
-          Haptics.selection();
-          onTap();
-        },
-        child: Semantics(
-          expanded: !isFolded,
-          child: SizedBox(
-            height: AnchorTokens.sizeControlMedium,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(
-                  width: AnchorTokens.space32,
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 5),
-                      // off-scale: centers the chevron over the checkboxes
-                      child: AnimatedRotation(
-                        turns: isFolded ? -0.25 : 0,
-                        duration: context.motion(spring.duration),
-                        curve: spring.curve,
-                        child: Icon(
-                          LucideIcons.chevronDown,
-                          size: AnchorTokens.sizeIconSmall,
-                          color: color,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                Text(
-                  labelOf(count, context.l10n),
-                  maxLines: 1,
-                  style: AppTypography.secondary.copyWith(
-                    color: color,
-                    height: 1,
-                  ),
-                ),
-              ],
-            ),
-          ),
+    return _FoldRowButton(
+      color: color,
+      onTap: onTap,
+      label: labelOf(count, context.l10n),
+      semantics: (child) => Semantics(expanded: !isFolded, child: child),
+      icon: AnimatedRotation(
+        turns: isFolded ? -0.25 : 0,
+        duration: context.motion(spring.duration),
+        curve: spring.curve,
+        child: Icon(
+          LucideIcons.chevronDown,
+          size: AnchorTokens.sizeIconSmall,
+          color: color,
         ),
       ),
     );
   }
+}
+
+/// Above [CheckedFoldRow]: puts a new item at the end of the open ones.
+class AddItemRow extends StatelessWidget {
+  const AddItemRow({super.key, required this.color, required this.onTap});
+
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => _FoldRowButton(
+    color: color,
+    onTap: onTap,
+    label: context.l10n.editorAddItem,
+    semantics: (child) => Semantics(button: true, child: child),
+    icon: Icon(
+      LucideIcons.plus,
+      size: AnchorTokens.sizeIconSmall,
+      color: color,
+    ),
+  );
 }

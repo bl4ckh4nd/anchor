@@ -6,6 +6,7 @@ import { DURATION, EASE } from "@/lib/design/tokens";
 import { isNearScreen, prefersReducedMotion } from "@/lib/motion";
 import type { QuillInstance } from "../../quill";
 import {
+  addItemDelta,
   type CheckedFold,
   checkedFoldStyles,
   findCheckedFolds,
@@ -13,6 +14,7 @@ import {
 } from "./checked-folds";
 
 export interface CheckedFoldRow {
+  fold: number;
   top: number;
   left: number;
   count: number;
@@ -173,7 +175,7 @@ export function useCheckedFolds({
     if (!root || !containerEl) return;
     const folds = foldsRef.current;
     const box = folds.length ? containerEl.getBoundingClientRect() : null;
-    const next = folds.flatMap((fold) => {
+    const next = folds.flatMap((fold, foldIndex) => {
       const firstItem = root.children[fold.block - 1]?.children[fold.first - 1];
       if (!(firstItem instanceof HTMLElement) || !box) return [];
       const rect = firstItem.getBoundingClientRect();
@@ -181,6 +183,7 @@ export function useCheckedFolds({
         Number.parseFloat(getComputedStyle(firstItem).marginTop) || 0;
       return [
         {
+          fold: foldIndex,
           top: rect.top - box.top - marginTop,
           left: rect.left - box.left,
           count: foldCount(fold),
@@ -193,7 +196,8 @@ export function useCheckedFolds({
         (row, i) =>
           Math.abs(row.top - next[i].top) < 0.5 &&
           Math.abs(row.left - next[i].left) < 0.5 &&
-          row.count === next[i].count,
+          row.count === next[i].count &&
+          row.fold === next[i].fold,
       )
         ? prev
         : next,
@@ -300,6 +304,22 @@ export function useCheckedFolds({
     [containerEl, getQuill, measureSoon, noteId, refresh, setChecklistFolded],
   );
 
+  const addItem = useCallback(
+    (foldIndex: number) => {
+      const quill = getQuill();
+      const fold = foldsRef.current[foldIndex];
+      const item =
+        quill?.root.children[fold?.block - 1]?.children[fold.first - 1];
+      const line = item && quill?.scroll.find(item);
+      if (!quill || !line) return;
+      const at = quill.getIndex(line);
+      quill.updateContents(addItemDelta(at), "user");
+      quill.setSelection(at, 0, "user");
+      quill.focus();
+    },
+    [getQuill],
+  );
+
   const revealSelection = useCallback(
     (index: number) => {
       if (!isFoldedRef.current) return;
@@ -325,6 +345,7 @@ export function useCheckedFolds({
     isFolded,
     isActive,
     toggle,
+    addItem,
     refresh,
     revealSelection,
   };

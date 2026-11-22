@@ -3352,6 +3352,12 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{1 checked item} other{{count} checked items}}'**
   String editorCheckedItems(int count);
 
+  /// Row above a checklist's checked items that adds a new item.
+  ///
+  /// In en, this message translates to:
+  /// **'Add item'**
+  String get editorAddItem;
+
   /// Title of the sheet that adds a link to text, and its confirm button.
   ///
   /// In en, this message translates to:

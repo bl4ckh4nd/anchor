@@ -2922,6 +2922,10 @@
       }
     }
   },
+  "editorAddItem": "Add item",
+  "@editorAddItem": {
+    "description": "Row above a checklist's checked items that adds a new item."
+  },
   "linkAdd": "Add link",
   "@linkAdd": {
     "description": "Title of the sheet that adds a link to text, and its confirm button."

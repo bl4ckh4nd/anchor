@@ -1,9 +1,10 @@
 "use client";
 
-import { ChevronDown, GripVertical } from "lucide-react";
+import { ChevronDown, GripVertical, Plus } from "lucide-react";
 import dynamic from "next/dynamic";
 import Delta from "quill-delta";
 import {
+  Fragment,
   forwardRef,
   useCallback,
   useEffect,
@@ -958,19 +959,32 @@ export const RichTextEditor = forwardRef<
               )}
             </div>
           )}
-          {checkedFolds.rows.map((row, index) => (
-            <button
-              key={index}
-              type="button"
-              className="ck-fold"
-              aria-expanded={!checkedFolds.isFolded}
-              style={{ top: row.top, left: row.left }}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={checkedFolds.toggle}
-            >
-              <ChevronDown aria-hidden />
-              {checkedItemsLabel(row.count)}
-            </button>
+          {checkedFolds.rows.map((row) => (
+            <Fragment key={row.fold}>
+              {!readOnly && (
+                <button
+                  type="button"
+                  className="ck-fold"
+                  style={{ top: row.top, left: row.left }}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => checkedFolds.addItem(row.fold)}
+                >
+                  <Plus aria-hidden />
+                  Add item
+                </button>
+              )}
+              <button
+                type="button"
+                className="ck-fold"
+                aria-expanded={!checkedFolds.isFolded}
+                style={{ top: row.top, left: row.left }}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={checkedFolds.toggle}
+              >
+                <ChevronDown aria-hidden />
+                {checkedItemsLabel(row.count)}
+              </button>
+            </Fragment>
           ))}
           <CodeCopyButtons container={editorContainerEl} />
           {!readOnly && (

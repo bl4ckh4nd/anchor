@@ -201,11 +201,63 @@ void main() {
     final eggs = textOf(tester, 'Eggs');
     final butter = textOf(tester, 'Butter');
     expect(
-      eggs.top - coffee.top - AnchorTokens.sizeControlMedium,
+      eggs.top - coffee.top - 2 * AnchorTokens.sizeControlMedium,
       moreOrLessEquals(butter.top - eggs.top, epsilon: 0.01),
     );
     expect(row.top, greaterThan(coffee.bottom));
     expect(row.bottom, lessThan(eggs.top));
+  });
+
+  testWidgets('Add item puts an empty open item after the last open one', (
+    tester,
+  ) async {
+    final state = await pumpNote(tester, groceries);
+    final add = tester.getRect(find.text('Add item'));
+    expect(
+      add.bottom,
+      lessThan(tester.getRect(find.byType(CheckedFoldRow)).top),
+    );
+
+    await tester.tap(find.text('Add item'));
+    await tester.pump();
+
+    expect(state.getPlainText(), startsWith('Oat milk\nCoffee beans\n\nEggs'));
+    final line =
+        state.controller.document
+                .queryChild('Oat milk\nCoffee beans\n'.length)
+                .node!
+            as Line;
+    expect(line.style.attributes['list']?.value, 'unchecked');
+    expect(state.selection, const TextSelection.collapsed(offset: 22));
+    expect(focus.hasFocus, isTrue);
+  });
+
+  testWidgets('Add item with every item checked starts the list', (
+    tester,
+  ) async {
+    final state = await pumpNote(tester, const [
+      ('Eggs', 'checked', 0),
+      ('Butter', 'checked', 0),
+    ], folded: true);
+
+    await tester.tap(find.text('Add item'));
+    await tester.pump();
+
+    expect(
+      state.controller.document.toPlainText(),
+      startsWith('\nEggs\nButter'),
+    );
+    final line = state.controller.document.queryChild(0).node! as Line;
+    expect(line.style.attributes['list']?.value, 'unchecked');
+    expect(state.selection, const TextSelection.collapsed(offset: 0));
+    expect(focus.hasFocus, isTrue);
+    expect(find.text('2 checked items'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 1));
+  });
+
+  testWidgets('a note you can only view has no Add item', (tester) async {
+    await pumpNote(tester, groceries, canEdit: false);
+    expect(find.text('Add item'), findsNothing);
   });
 
   testWidgets('one checked item says so in the singular', (tester) async {
