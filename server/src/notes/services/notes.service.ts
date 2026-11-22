@@ -22,8 +22,10 @@ import {
   guardedNoteFieldsChanged,
   noteContentChanged,
 } from '../utils/note-versioning.util';
+import { randomUUID } from 'crypto';
 import {
   SyncEmitterService,
+  attachmentsEmissions,
   noteEmissions,
   pinEmission,
   reminderEmission,
@@ -123,6 +125,76 @@ export class NotesService {
       }
       throw error;
     }
+  }
+
+  // A new note of the caller's own with the source's text, background, the
+  // caller's tags and copies of its attachment files. Anyone who can read the
+  // note may copy it; shares, pin, archive, reminder and history stay behind.
+  async duplicate(userId: string, id: string) {
+    const access = await this.noteAccessService.hasNoteAccess(userId, id);
+    if (!access.hasAccess || access.state !== NoteState.active) {
+      throw new NotFoundException(ERROR_MESSAGES.NOTE_NOT_FOUND);
+    }
+    const source = await this.prisma.note.findUniqueOrThrow({
+      where: { id },
+      include: {
+        tags: { where: { userId, isDeleted: false }, select: { id: true } },
+        attachments: { orderBy: { position: 'asc' } },
+      },
+    });
+
+    const copyId = randomUUID();
+    try {
+      const attachments = await this.noteAttachmentsService.copyFiles(
+        source.attachments,
+        copyId,
+        userId,
+      );
+      await this.prisma.$transaction(async (tx) => {
+        if (!(await this.lockReadableNote(tx, userId, id))) {
+          throw new NotFoundException(ERROR_MESSAGES.NOTE_NOT_FOUND);
+        }
+        await tx.note.create({
+          data: {
+            id: copyId,
+            title: source.title,
+            content: source.content,
+            background: source.background,
+            state: NoteState.active,
+            userId,
+            tags: { connect: source.tags },
+          },
+        });
+        await tx.noteAttachment.createMany({ data: attachments });
+        await this.syncEmitter.emit(tx, [
+          ...noteEmissions([userId], copyId),
+          ...(attachments.length ? attachmentsEmissions([userId], copyId) : []),
+        ]);
+      });
+    } catch (error) {
+      await this.noteAttachmentsService.deleteAllForNote(copyId);
+      throw error;
+    }
+    return this.findOne(userId, copyId);
+  }
+
+  // Re-checks under row locks that [userId] may still read the active note,
+  // so a revoke or trash running alongside waits for this transaction, or
+  // this one sees its result.
+  private async lockReadableNote(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    id: string,
+  ): Promise<boolean> {
+    const [note] = await tx.$queryRaw<{ userId: string; state: NoteState }[]>`
+      SELECT "userId", state FROM "Note" WHERE id = ${id} FOR SHARE`;
+    if (note?.state !== NoteState.active) return false;
+    if (note.userId === userId) return true;
+    const [share] = await tx.$queryRaw<{ isDeleted: boolean }[]>`
+      SELECT "isDeleted" FROM "NoteShare"
+      WHERE "noteId" = ${id} AND "sharedWithUserId" = ${userId}
+      FOR SHARE`;
+    return share?.isDeleted === false;
   }
 
   private async findCreatedNote(userId: string, id: string) {

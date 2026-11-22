@@ -239,10 +239,11 @@ class NotesRepository {
     scheduleAppSync(trigger: 'NotesRepo.createNote');
   }
 
+  /// A save that lands after the note was deleted for good is dropped.
   Future<void> updateNote(Note note) async {
     await _db.transaction(() async {
       final prior = await _db.noteRow(note.id);
-      if (prior == null) return;
+      if (prior == null || prior.state == NoteState.deleted.name) return;
 
       if (prior.title != note.title || prior.content != note.content) {
         await _revisions.record(prior);

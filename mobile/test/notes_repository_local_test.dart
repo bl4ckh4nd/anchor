@@ -417,6 +417,21 @@ void main() {
       expect(rows.every((row) => !row.isSynced), isTrue);
       expect(await repo.watchTrashedNotes().first, hasLength(1));
     });
+
+    test('an edit saved after the note was deleted for good leaves it '
+        'deleted', () async {
+      await insertNote(id: 'n1');
+      final open = (await repo.getNote('n1'))!;
+
+      await repo.deleteForever(['n1']);
+      await repo.updateNote(open.copyWith(content: 'late save'));
+
+      final row = await (db.select(
+        db.notes,
+      )..where((tbl) => tbl.id.equals('n1'))).getSingle();
+      expect(row.state, 'deleted');
+      expect(row.content, isNull);
+    });
   });
 
   group('edit time', () {

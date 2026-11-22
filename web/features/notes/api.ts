@@ -104,6 +104,10 @@ export async function restoreNote(id: string): Promise<Note> {
   return api.patch(`api/notes/${id}/restore`).json<Note>();
 }
 
+export async function duplicateNote(id: string): Promise<Note> {
+  return api.post(`api/notes/${id}/duplicate`).json<Note>();
+}
+
 export async function permanentDeleteNote(id: string): Promise<void> {
   await api.delete(`api/notes/${id}/permanent`);
 }

@@ -2314,6 +2314,10 @@
   "@actionUnarchive": {
     "description": "Verb, in menus and the selection bar: moves notes from the archive back to Notes."
   },
+  "actionMakeCopy": "Make a copy",
+  "@actionMakeCopy": {
+    "description": "In the open note's menu: makes a new note of your own with the same title, text, background, tags and attachments."
+  },
   "actionDelete": "Delete",
   "@actionDelete": {
     "description": "Verb: moves notes to the trash or deletes a picture. Short: fits the selection bar."
@@ -3561,6 +3565,26 @@
   "noteGone": "This note is no longer available",
   "@noteGone": {
     "description": "Toast when the open note was deleted or unshared elsewhere."
+  },
+  "noteCopyMade": "Copy made. You’re editing the copy.",
+  "@noteCopyMade": {
+    "description": "Toast once a copy of the note was made and opened, with an Undo button that deletes the copy and goes back to the original."
+  },
+  "noteCopyOffline": "Connect to the internet to make a copy.",
+  "@noteCopyOffline": {
+    "description": "Toast when Make a copy is chosen while the phone is offline; copies are made on the server."
+  },
+  "noteCopyFailed": "Couldn’t make a copy. Try again once your changes have synced.",
+  "@noteCopyFailed": {
+    "description": "Error toast when the copy could not be made, for example because the note's latest changes have not reached the server yet."
+  },
+  "noteCopyArriving": "Copy made. It appears once the app syncs.",
+  "@noteCopyArriving": {
+    "description": "Toast when the server made the copy but it has not reached this phone yet."
+  },
+  "noteCopying": "Making a copy…",
+  "@noteCopying": {
+    "description": "Screen reader label of the spinner in the note’s top bar while a copy is being made; the note can’t be edited meanwhile."
   },
   "reminderRemoved": "Reminder removed",
   "@reminderRemoved": {

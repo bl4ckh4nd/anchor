@@ -68,6 +68,11 @@ Future<NoteAction?> showNoteMoreSheet(
               icon: LucideIcons.archive,
               label: l10n.actionArchive,
             ),
+      SheetChoice(
+        value: NoteAction.copy,
+        icon: LucideIcons.copy,
+        label: l10n.actionMakeCopy,
+      ),
       isOwner
           ? SheetChoice(
               value: NoteAction.trash,

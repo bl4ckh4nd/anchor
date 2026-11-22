@@ -25,6 +25,7 @@ import '../../tags/domain/tag.dart';
 import '../../tags/presentation/tags_controller.dart';
 import '../../tags/presentation/widgets/tag_sheets.dart';
 import '../data/repository/note_attachments_repository.dart';
+import '../data/repository/note_copier.dart';
 import '../data/repository/note_shares_repository.dart';
 import '../data/repository/notes_repository.dart';
 import '../domain/note.dart';
@@ -101,11 +102,15 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen>
     _openedAsNew,
   );
   bool _isBodyBlank = true;
+  bool _isCopying = false;
 
   Animation<double>? _routeAnimation;
   bool _isOpen = true;
 
   bool get _isReadOnly => _draft.isReadOnly;
+
+  /// Edits typed while a copy is being made would miss the copy.
+  bool get _canEdit => !_isReadOnly && !_isCopying;
 
   bool get _writing => _titleFocus.hasFocus || _editorFocus.hasFocus;
 
@@ -241,7 +246,7 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen>
   }
 
   void _showBackground() {
-    if (_isReadOnly) return;
+    if (!_canEdit) return;
     showBackgroundSheet(
       context,
       current: _draft.background,
@@ -328,6 +333,8 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen>
         );
       case NoteAction.unarchive:
         await actions.unarchive([note]);
+      case NoteAction.copy:
+        await _makeCopy(note);
       case NoteAction.trash:
         await actions.trash(
           [note],
@@ -337,6 +344,61 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen>
       case NoteAction.tag || NoteAction.restore || NoteAction.deleteForever:
         break;
     }
+  }
+
+  /// Copies are made on the server; the copy opens in place of this note.
+  Future<void> _makeCopy(Note note) async {
+    if (_isCopying) return;
+    final l10n = context.l10n;
+    if (!ref.read(isOnlineProvider)) {
+      AppSnackbar.show(context, l10n.noteCopyOffline, kind: SnackbarKind.info);
+      return;
+    }
+    final router = GoRouter.of(context);
+    final repo = ref.read(notesRepositoryProvider);
+    final String copyId;
+    final Note? copy;
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() => _isCopying = true);
+    try {
+      try {
+        await _draft.saveNow();
+        await NoteAttachmentsStrip.settle(note.id);
+        copyId = await ref.read(noteCopierProvider).copy(note.id);
+      } catch (_) {
+        if (mounted) {
+          AppSnackbar.show(
+            context,
+            l10n.noteCopyFailed,
+            kind: SnackbarKind.error,
+          );
+        }
+        return;
+      }
+      copy = await repo.getNote(copyId);
+    } finally {
+      // Until the copy opens, edits here would land only in the original.
+      if (mounted) setState(() => _isCopying = false);
+    }
+    if (!mounted) return;
+    if (copy == null) {
+      AppSnackbar.show(context, l10n.noteCopyArriving);
+      return;
+    }
+    final copyPath = AppRoutes.note(copyId);
+    AppSnackbar.show(
+      context,
+      l10n.noteCopyMade,
+      kind: SnackbarKind.success,
+      actionLabel: l10n.commonUndo,
+      onAction: () async {
+        if (router.state.uri.path == copyPath) {
+          router.go(AppRoutes.note(note.id), extra: note);
+        }
+        await repo.deleteForever([copyId]);
+      },
+    );
+    router.go(copyPath, extra: copy);
   }
 
   void _offerUndo(UndoableEdit? edit, String Function(int count) message) {
@@ -418,7 +480,7 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen>
   }
 
   Future<void> _showAdd() async {
-    if (_isReadOnly) return;
+    if (!_canEdit) return;
     final file = await showAddSheet(context);
     if (file == null || !mounted) return;
     final kind = AttachmentKind.of(mimeType: file.mime, filename: file.name);
@@ -458,6 +520,7 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen>
 
   void _focusEditorEnd() {
     if (_isReadOnly) return _shakeReadOnly();
+    if (_isCopying) return;
     _editor?.focusEnd();
   }
 
@@ -511,7 +574,7 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen>
   Widget build(BuildContext context) {
     final colors = context.anchor;
     final appearance = NoteAppearance.of(context, _draft.background);
-    final writing = _writing && !_isReadOnly;
+    final writing = _writing && _canEdit;
     final density = context.density;
     final titleStyle = context.noteTypography.title;
     final titlePadding = EdgeInsets.fromLTRB(
@@ -545,6 +608,7 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen>
       isUnsynced: note != null && !note.isSynced && !_isReadOnly,
       isTrashed: isTrashed,
       isReadOnly: _isReadOnly,
+      isCopying: _isCopying,
       onBack: _back,
       onHistory: _openHistory,
       onBackground: _showBackground,
@@ -575,6 +639,7 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen>
             : TextField(
                 controller: _draft.title,
                 focusNode: _titleFocus,
+                readOnly: _isCopying,
                 showCursor: _isOpen,
                 undoController: _titleHistory,
                 maxLines: null,
@@ -619,9 +684,9 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen>
             tagIds: _draft.tagIds,
             reminder: note?.reminder,
             appearance: appearance,
-            readOnly: isTrashed,
+            readOnly: isTrashed || _isCopying,
             onAdd: _addTags,
-            onRemove: isTrashed ? null : _removeTag,
+            onRemove: isTrashed || _isCopying ? null : _removeTag,
             onReminder: _showReminder,
           ),
         ),
@@ -630,7 +695,7 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen>
             noteId: note.id,
             appearance: appearance,
             isOwner: note.isOwner,
-            canEdit: note.canEdit && note.isActive,
+            canEdit: note.canEdit && note.isActive && !_isCopying,
             currentUserId: ref.watch(activeUserIdProvider),
             onAdd: _showAdd,
           ),
@@ -714,7 +779,7 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen>
                     initialContent: _draft.initialContent,
                     contentVersion: _draft.contentVersion,
                     focusNode: _editorFocus,
-                    canEdit: !_isReadOnly,
+                    canEdit: _canEdit,
                     scrollController: _scroll,
                     palette: palette,
                     bottomInset: _editorOverlay.caretSpace,
@@ -812,8 +877,8 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen>
               child: EditorOverlay(
                 controller: _editorOverlay,
                 palette: palette,
-                hasToolbar: !_isReadOnly && _draft.isLoaded,
-                canEdit: !_isReadOnly,
+                hasToolbar: _canEdit && _draft.isLoaded,
+                canEdit: _canEdit,
                 isWriting: writing,
                 isTitleFocused: _titleFocus.hasFocus,
                 titleHistory: _titleHistory,

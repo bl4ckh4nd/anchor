@@ -64,12 +64,31 @@ export async function writeAttachmentFile(
   originalName: string,
   data: Buffer,
 ): Promise<{ storedFilename: string; filePath: string }> {
-  await fs.mkdir(noteDir, { recursive: true });
-
-  const ext = path.extname(originalName).toLowerCase();
-  const storedFilename = `${crypto.randomUUID()}-${Date.now()}${ext}`;
-  const filePath = path.join(noteDir, storedFilename);
-
+  const { storedFilename, filePath } = await newAttachmentPath(
+    noteDir,
+    originalName,
+  );
   await fs.writeFile(filePath, data);
   return { storedFilename, filePath };
+}
+
+export async function copyAttachmentFile(
+  fromNoteDir: string,
+  storedFilename: string,
+  toNoteDir: string,
+): Promise<string> {
+  const copy = await newAttachmentPath(toNoteDir, storedFilename);
+  await fs.copyFile(
+    path.join(fromNoteDir, storedFilename),
+    copy.filePath,
+    fs.constants.COPYFILE_EXCL,
+  );
+  return copy.storedFilename;
+}
+
+async function newAttachmentPath(noteDir: string, originalName: string) {
+  await fs.mkdir(noteDir, { recursive: true });
+  const ext = path.extname(originalName).toLowerCase();
+  const storedFilename = `${crypto.randomUUID()}-${Date.now()}${ext}`;
+  return { storedFilename, filePath: path.join(noteDir, storedFilename) };
 }
