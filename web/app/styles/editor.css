@@ -5,6 +5,7 @@
   --box: var(--size-checkbox);
   --box-left: 2px;
   --fold-row: var(--size-control-small);
+  --fold-rows: 2;
   position: relative;
 }
 @media (pointer: coarse) {
@@ -333,6 +334,12 @@
   white-space: nowrap;
   cursor: pointer;
   transition: color var(--duration-hover);
+}
+.anchor-quill.read-only {
+  --fold-rows: 1;
+}
+.anchor-quill .ck-fold[aria-expanded] {
+  margin-top: calc(var(--fold-row) * (var(--fold-rows) - 1));
 }
 .anchor-quill .ck-fold:hover {
   color: var(--foreground);

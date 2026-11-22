@@ -59,6 +59,7 @@ Widget? buildListMarker(
   required bool Function(Line line) wasJustChecked,
   required bool isFolded,
   required VoidCallback onFold,
+  required VoidCallback onAddItem,
   required bool isDragged,
 }) {
   if (config.attrs.containsKey(Attribute.codeBlock.key)) {
@@ -73,18 +74,32 @@ Widget? buildListMarker(
   final muted = palette.muted;
   final endGap = role?.endsList ?? false ? typography.listEndGap : 0.0;
   final checkedBelow = role?.checkedBelow ?? 0;
-  final foldGap = checkedBelow > 0 ? AnchorTokens.sizeControlMedium : 0.0;
+  final foldRows = canEdit ? 2 : 1;
+  final foldGap = checkedBelow > 0
+      ? foldRows * AnchorTokens.sizeControlMedium
+      : 0.0;
   final row = checkedBelow > 0
       ? cache._cached(
           cache._rows,
           line,
-          (checkedBelow, isFolded, muted),
-          () => CheckedFoldRow(
-            count: checkedBelow,
-            isFolded: isFolded,
-            color: muted,
-            onTap: onFold,
-          ),
+          (checkedBelow, isFolded, muted, canEdit),
+          () {
+            final fold = CheckedFoldRow(
+              count: checkedBelow,
+              isFolded: isFolded,
+              color: muted,
+              onTap: onFold,
+            );
+            return canEdit
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AddItemRow(color: muted, onTap: onAddItem),
+                      fold,
+                    ],
+                  )
+                : fold;
+          },
         )
       : null;
 

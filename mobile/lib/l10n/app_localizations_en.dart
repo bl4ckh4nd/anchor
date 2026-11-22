@@ -2210,6 +2210,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get editorAddItem => 'Add item';
+
+  @override
   String get linkAdd => 'Add link';
 
   @override
