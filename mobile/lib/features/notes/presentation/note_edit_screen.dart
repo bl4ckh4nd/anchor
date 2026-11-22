@@ -563,7 +563,8 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen>
       final bottom =
           MediaQuery.sizeOf(context).height -
           context.safeBottomAtRest -
-          _searchBarSpace;
+          _searchBarSpace -
+          _readOnlyBarSpace;
       if (rect.top >= top && rect.bottom <= bottom) return;
       target = position.pixels + rect.center.dy - (top + bottom) / 2;
     }
@@ -575,6 +576,14 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen>
   }
 
   /// Room the search bar takes at the bottom, with its gaps.
+  /// What the read-only bar and its gap take under the search bar.
+  double get _readOnlyBarSpace {
+    final note = _draft.note;
+    return _isReadOnly && note != null && !note.isDeleted
+        ? _readOnlyBarHeight + 8
+        : 0;
+  }
+
   static const double _searchBarSpace =
       AnchorTokens.sizeControlSmall + AnchorTokens.space16;
 
@@ -614,10 +623,8 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen>
     final note = _draft.note;
     final isNew = _draft.isNew;
     final isTrashed = _draft.isTrashed;
-    final hasReadOnlyBar = _isReadOnly && note != null && !note.isDeleted;
     // Above the read-only bar when there is one.
-    final searchBarBottom =
-        safeBottom + 8 + (hasReadOnlyBar ? _readOnlyBarHeight + 8 : 0);
+    final searchBarBottom = safeBottom + 8 + _readOnlyBarSpace;
     final titleMatches = _titleMatches;
     final matchCount = titleMatches.length + _bodyMatches;
     final searchIndex = matchCount == 0
