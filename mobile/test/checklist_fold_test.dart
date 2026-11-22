@@ -212,11 +212,10 @@ void main() {
     tester,
   ) async {
     final state = await pumpNote(tester, groceries);
-    final add = tester.getRect(find.text('Add item'));
-    expect(
-      add.bottom,
-      lessThan(tester.getRect(find.byType(CheckedFoldRow)).top),
-    );
+    final add = tester.getRect(find.byType(AddItemRow));
+    final fold = tester.getRect(find.byType(CheckedFoldRow));
+    expect(add.bottom, lessThanOrEqualTo(fold.top));
+    expect(add.left, fold.left);
 
     await tester.tap(find.text('Add item'));
     await tester.pump();
@@ -252,6 +251,39 @@ void main() {
     expect(state.selection, const TextSelection.collapsed(offset: 0));
     expect(focus.hasFocus, isTrue);
     expect(find.text('2 checked items'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 1));
+  });
+
+  testWidgets('Add item before a lone empty checked item adds a line', (
+    tester,
+  ) async {
+    final state = await pumpNote(tester, const [('', 'checked', 0)]);
+
+    await tester.tap(find.text('Add item'));
+    await tester.pump();
+
+    final lines = state.controller.document.root.children
+        .expand((node) => node is Block ? node.children : [node])
+        .cast<Line>()
+        .map((line) => line.style.attributes['list']?.value)
+        .toList();
+    expect(lines.take(2), ['unchecked', 'checked']);
+    await tester.pump(const Duration(seconds: 1));
+  });
+
+  testWidgets('Add item keeps the indent of a checked child', (tester) async {
+    final state = await pumpNote(tester, const [
+      ('Tent', 'unchecked', 0),
+      ('Pegs', 'checked', 1),
+    ]);
+
+    await tester.tap(find.text('Add item'));
+    await tester.pump();
+
+    final line =
+        state.controller.document.queryChild('Tent\n'.length).node! as Line;
+    expect(line.style.attributes['list']?.value, 'unchecked');
+    expect(line.style.attributes['indent']?.value, 1);
     await tester.pump(const Duration(seconds: 1));
   });
 

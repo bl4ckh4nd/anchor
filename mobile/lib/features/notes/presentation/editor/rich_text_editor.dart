@@ -254,17 +254,24 @@ class RichTextEditorState extends State<RichTextEditor>
     _setFolded(!_isFolded);
   }
 
-  /// At the end of the open items, right before [firstChecked].
+  /// At the end of the open items, right before [firstChecked], at its indent.
   void _addItem(Line firstChecked) {
     _consumeNextEditorTap();
     final offset = firstChecked.documentOffset;
-    _controller.replaceText(
-      offset,
-      0,
-      '\n',
-      TextSelection.collapsed(offset: offset),
-    );
-    _controller.formatText(offset, 0, Attribute.unchecked);
+    final indent = firstChecked.style.attributes[Attribute.indent.key];
+    final caret = TextSelection.collapsed(offset: offset);
+    _controller
+      ..compose(
+        Delta()
+          ..retain(offset)
+          ..insert('\n', {
+            Attribute.list.key: Attribute.unchecked.value,
+            if (indent != null) indent.key: indent.value,
+          }),
+        caret,
+        ChangeSource.local,
+      )
+      ..updateSelection(caret, ChangeSource.local);
     widget.focusNode.requestFocus();
   }
 

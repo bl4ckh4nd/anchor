@@ -58,11 +58,14 @@ export function checkedFoldStyles(
     .join("\n");
 }
 
-/** The delta that puts an empty unchecked item right before the fold's first checked item. */
-export const addItemDelta = (at: number) => ({
+/** The delta that puts an empty unchecked item right before the fold's first checked item, at its indent. */
+export const addItemDelta = (at: number, indent?: unknown) => ({
   ops: [
     ...(at ? [{ retain: at }] : []),
-    { insert: "\n", attributes: { list: "unchecked" } },
+    {
+      insert: "\n",
+      attributes: { list: "unchecked", ...(indent ? { indent } : {}) },
+    },
   ],
 });
 

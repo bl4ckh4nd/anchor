@@ -92,6 +92,7 @@ Widget? buildListMarker(
             );
             return canEdit
                 ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       AddItemRow(color: muted, onTap: onAddItem),
                       fold,

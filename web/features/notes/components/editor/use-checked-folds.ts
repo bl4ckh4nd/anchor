@@ -313,7 +313,10 @@ export function useCheckedFolds({
       const line = item && quill?.scroll.find(item);
       if (!quill || !line) return;
       const at = quill.getIndex(line);
-      quill.updateContents(addItemDelta(at), "user");
+      quill.updateContents(
+        addItemDelta(at, quill.getFormat(at, 0).indent),
+        "user",
+      );
       quill.setSelection(at, 0, "user");
       quill.focus();
     },

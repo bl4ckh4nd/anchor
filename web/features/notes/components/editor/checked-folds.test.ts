@@ -46,6 +46,13 @@ describe("addItemDelta", () => {
       { insert: "\n", attributes: { list: "unchecked" } },
     ]);
   });
+
+  it("keeps the first checked item's indent, so a checked child keeps its parent", () => {
+    expect(addItemDelta(9, 1).ops).toEqual([
+      { retain: 9 },
+      { insert: "\n", attributes: { list: "unchecked", indent: 1 } },
+    ]);
+  });
 });
 
 describe("checkedFoldStyles", () => {
