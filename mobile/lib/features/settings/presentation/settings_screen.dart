@@ -293,6 +293,11 @@ class _EditorSection extends ConsumerWidget {
             value: editor.sortChecklistItems,
             onChanged: controller.setSortChecklistItems,
           ),
+          SwitchRow(
+            label: l10n.settingsStartNewNotesInBody,
+            value: editor.startNewNotesInBody,
+            onChanged: controller.setStartNewNotesInBody,
+          ),
         ],
       ),
     );

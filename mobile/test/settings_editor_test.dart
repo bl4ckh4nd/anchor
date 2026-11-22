@@ -204,7 +204,7 @@ void main() {
         (w) => w is Container && w.constraints?.maxHeight == 1,
       ),
     );
-    expect(dividersIn('Font'), findsNWidgets(2));
+    expect(dividersIn('Font'), findsNWidgets(3));
     await tester.drag(find.byType(Scrollable).first, const Offset(0, 400));
     await tester.pumpAndSettle();
     // Only the switch has a line above it; the theme picker has none below.
@@ -213,6 +213,33 @@ void main() {
     expect(
       line.bottom,
       lessThan(tester.getRect(find.text('Pictures on note cards')).top),
+    );
+  });
+
+  testWidgets('starting notes in the body is off by default and is saved', (
+    tester,
+  ) async {
+    await pumpSettings(tester);
+    final label = find.text('Start new notes in the body');
+    await tester.scrollUntilVisible(
+      label,
+      180,
+      scrollable: find.byType(Scrollable).first,
+      maxScrolls: 8,
+    );
+    final off = find.bySemanticsLabel(
+      _english.commonSwitchOff('Start new notes in the body'),
+    );
+    expect(off, findsOneWidget);
+    await tester.tap(label);
+    await tester.pumpAndSettle();
+    final on = find.bySemanticsLabel(
+      _english.commonSwitchOn('Start new notes in the body'),
+    );
+    expect(on, findsOneWidget);
+    expect(
+      await const FlutterSecureStorage().read(key: 'editor_start_in_body'),
+      'true',
     );
   });
 

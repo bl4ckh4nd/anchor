@@ -1000,6 +1000,10 @@
   "@settingsMoveCheckedHelp": {
     "description": "Under the switch that moves checked checklist items to the bottom."
   },
+  "settingsStartNewNotesInBody": "Start new notes in the body",
+  "@settingsStartNewNotesInBody": {
+    "description": "Editor setting to open new notes with the cursor in the note body."
+  },
   "settingsPreviewTitle": "Weekend in Lisbon",
   "@settingsPreviewTitle": {
     "description": "Title of a sample note that previews the font and text size."

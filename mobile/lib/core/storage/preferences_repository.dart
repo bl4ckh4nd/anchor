@@ -31,6 +31,14 @@ class PreferencesRepository {
     );
   }
 
+  Future<bool> getStartNewNotesInBody() async =>
+      await _storage.read(key: StorageKeys.startNewNotesInBody) == 'true';
+
+  Future<void> setStartNewNotesInBody(bool value) => _storage.write(
+    key: StorageKeys.startNewNotesInBody,
+    value: value.toString(),
+  );
+
   /// Most recent last.
   Future<List<String>> getFoldedChecklistNotes() =>
       _readIds(StorageKeys.foldedChecklistNotes);

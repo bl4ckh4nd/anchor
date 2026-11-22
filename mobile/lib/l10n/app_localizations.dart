@@ -1336,6 +1336,12 @@ abstract class AppLocalizations {
   /// **'Checked items move below the unchecked ones.'**
   String get settingsMoveCheckedHelp;
 
+  /// Editor setting to open new notes with the cursor in the note body.
+  ///
+  /// In en, this message translates to:
+  /// **'Start new notes in the body'**
+  String get settingsStartNewNotesInBody;
+
   /// Title of a sample note that previews the font and text size.
   ///
   /// In en, this message translates to:

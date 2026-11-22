@@ -137,8 +137,12 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen>
     _draft.addListener(_draftChanged);
     _editorOverlay.addListener(_editorOverlayChanged);
     if (_openedAsNew) {
+      final startInBody = ref
+          .read(editorPreferencesControllerProvider)
+          .startNewNotesInBody;
+      final initialFocus = startInBody ? _editorFocus : _titleFocus;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _titleFocus.requestFocus();
+        if (mounted) initialFocus.requestFocus();
       });
     }
     _titleFocus.addListener(_focusChanged);
