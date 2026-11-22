@@ -541,7 +541,9 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen>
   void _stepSearch(int step) {
     final total = _titleMatches.length + _bodyMatches;
     if (total == 0) return;
-    setState(() => _searchIndex = (_searchIndex + step) % total);
+    // From the match shown: folding can leave fewer than were stepped past.
+    final at = _searchIndex.clamp(0, total - 1);
+    setState(() => _searchIndex = (at + step) % total);
     WidgetsBinding.instance.addPostFrameCallback((_) => _revealMatch());
   }
 

@@ -508,6 +508,37 @@ void main() {
       expect(find.text('1 of 2'), findsOneWidget);
     });
 
+    testWidgets('steps from the match shown after folding drops some', (
+      tester,
+    ) async {
+      when(
+        () => prefsRepo.setFoldedChecklistNotes(any()),
+      ).thenAnswer((_) async {});
+      final groceries = Note(
+        id: 'n1',
+        title: 'Groceries',
+        content: checklist([
+          ('Oat milk', 'unchecked'),
+          ('Soy milk', 'unchecked'),
+          ('Whole milk', 'checked'),
+        ]),
+      );
+      await pumpScreen(tester, note: groceries, searchQuery: 'milk');
+      await tester.pumpAndSettle();
+      await tester.tap(barButton('Next match'));
+      await tester.tap(barButton('Next match'));
+      await tester.pumpAndSettle();
+      expect(find.text('3 of 3'), findsOneWidget);
+
+      await tester.tap(find.byType(CheckedFoldRow));
+      await tester.pumpAndSettle();
+      expect(find.text('2 of 2'), findsOneWidget);
+
+      await tester.tap(barButton('Previous match'));
+      await tester.pumpAndSettle();
+      expect(find.text('1 of 2'), findsOneWidget);
+    });
+
     testWidgets('shows no bar when the only match is folded', (tester) async {
       final groceries = Note(
         id: 'n1',
