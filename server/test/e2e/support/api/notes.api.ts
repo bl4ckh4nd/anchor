@@ -31,6 +31,11 @@ export class NotesApi {
     return bodyOf<NoteOnWire>(res);
   }
 
+  async duplicate(id: string): Promise<NoteOnWire> {
+    const res = await this.http.post(`/api/notes/${id}/duplicate`).expect(201);
+    return bodyOf<NoteOnWire>(res);
+  }
+
   async trash(id: string): Promise<void> {
     await this.http.delete(`/api/notes/${id}`).expect(200);
   }

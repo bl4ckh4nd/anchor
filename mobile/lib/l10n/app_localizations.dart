@@ -1270,6 +1270,18 @@ abstract class AppLocalizations {
   /// **'Compact fits more notes on the screen.'**
   String get settingsDensityHelp;
 
+  /// Switch in Settings, Appearance: whether note cards in the notes list show the note's pictures.
+  ///
+  /// In en, this message translates to:
+  /// **'Pictures on note cards'**
+  String get settingsCardPictures;
+
+  /// Under the Pictures on note cards switch. The pictures stay in the note; only the card hides them.
+  ///
+  /// In en, this message translates to:
+  /// **'Show a note’s first pictures at the top of its card.'**
+  String get settingsCardPicturesHelp;
+
   /// Screen reader name of the group of light, dark and automatic theme choices.
   ///
   /// In en, this message translates to:
@@ -2674,6 +2686,12 @@ abstract class AppLocalizations {
   /// **'Unarchive'**
   String get actionUnarchive;
 
+  /// In the open note's menu: makes a new note of your own with the same title, text, background, tags and attachments.
+  ///
+  /// In en, this message translates to:
+  /// **'Make a copy'**
+  String get actionMakeCopy;
+
   /// Verb: moves notes to the trash or deletes a picture. Short: fits the selection bar.
   ///
   /// In en, this message translates to:
@@ -2955,6 +2973,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 picture} other{{count} pictures}}'**
   String cardPictures(int count);
+
+  /// Read out by screen readers with a note card that shows no pictures: how many files the note has.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 attachment} other{{count} attachments}}'**
+  String cardAttachments(int count);
 
   /// Under a note’s title, or spoken on a card: who shared the note with the person.
   ///
@@ -4059,6 +4083,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This note is no longer available'**
   String get noteGone;
+
+  /// Toast once a copy of the note was made and opened, with an Undo button that deletes the copy and goes back to the original.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy made. You’re editing the copy.'**
+  String get noteCopyMade;
+
+  /// Toast when Make a copy is chosen while the phone is offline; copies are made on the server.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect to the internet to make a copy.'**
+  String get noteCopyOffline;
+
+  /// Error toast when the copy could not be made, for example because the note's latest changes have not reached the server yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t make a copy. Try again once your changes have synced.'**
+  String get noteCopyFailed;
+
+  /// Toast when the server made the copy but it has not reached this phone yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy made. It appears once the app syncs.'**
+  String get noteCopyArriving;
+
+  /// Screen reader label of the spinner in the note’s top bar while a copy is being made; the note can’t be edited meanwhile.
+  ///
+  /// In en, this message translates to:
+  /// **'Making a copy…'**
+  String get noteCopying;
 
   /// Toast after a note’s reminder was removed, with an Undo button.
   ///

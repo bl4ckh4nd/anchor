@@ -114,3 +114,56 @@ abstract class _$DisplayDensityController extends $Notifier<DisplayDensity> {
     return element.handleCreate(ref, build);
   }
 }
+
+@ProviderFor(CardPicturesController)
+final cardPicturesControllerProvider = CardPicturesControllerProvider._();
+
+final class CardPicturesControllerProvider
+    extends $NotifierProvider<CardPicturesController, bool> {
+  CardPicturesControllerProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'cardPicturesControllerProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$cardPicturesControllerHash();
+
+  @$internal
+  @override
+  CardPicturesController create() => CardPicturesController();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$cardPicturesControllerHash() =>
+    r'681d9937d415ba49815bb356eddb3849ec1e575f';
+
+abstract class _$CardPicturesController extends $Notifier<bool> {
+  bool build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<bool, bool>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<bool, bool>,
+              bool,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}

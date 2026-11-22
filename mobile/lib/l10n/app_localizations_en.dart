@@ -707,6 +707,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsDensityHelp => 'Compact fits more notes on the screen.';
 
   @override
+  String get settingsCardPictures => 'Pictures on note cards';
+
+  @override
+  String get settingsCardPicturesHelp =>
+      'Show a note’s first pictures at the top of its card.';
+
+  @override
   String get settingsTheme => 'Theme';
 
   @override
@@ -1685,6 +1692,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get actionUnarchive => 'Unarchive';
 
   @override
+  String get actionMakeCopy => 'Make a copy';
+
+  @override
   String get actionDelete => 'Delete';
 
   @override
@@ -1981,6 +1991,17 @@ class AppLocalizationsEn extends AppLocalizations {
       locale: localeName,
       other: '$count pictures',
       one: '1 picture',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cardAttachments(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count attachments',
+      one: '1 attachment',
     );
     return '$_temp0';
   }
@@ -2648,6 +2669,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noteGone => 'This note is no longer available';
+
+  @override
+  String get noteCopyMade => 'Copy made. You’re editing the copy.';
+
+  @override
+  String get noteCopyOffline => 'Connect to the internet to make a copy.';
+
+  @override
+  String get noteCopyFailed =>
+      'Couldn’t make a copy. Try again once your changes have synced.';
+
+  @override
+  String get noteCopyArriving => 'Copy made. It appears once the app syncs.';
+
+  @override
+  String get noteCopying => 'Making a copy…';
 
   @override
   String get reminderRemoved => 'Reminder removed';

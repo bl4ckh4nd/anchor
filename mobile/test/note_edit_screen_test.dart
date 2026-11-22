@@ -9,8 +9,10 @@ import 'package:anchor/core/storage/preferences_repository.dart';
 import 'package:anchor/core/widgets/app_snackbar.dart';
 import 'package:anchor/core/widgets/grouped_list.dart';
 import 'package:anchor/features/notes/data/repository/note_attachments_repository.dart';
+import 'package:anchor/features/notes/data/repository/note_copier.dart';
 import 'package:anchor/features/notes/data/repository/notes_repository.dart';
 import 'package:anchor/features/notes/domain/note.dart';
+import 'package:anchor/features/notes/domain/note_attachment.dart';
 import 'package:anchor/features/notes/presentation/editor/checklist_fold.dart';
 import 'package:anchor/features/notes/presentation/editor/document_lines.dart';
 import 'package:anchor/features/notes/presentation/editor/editor_format.dart';
@@ -22,7 +24,10 @@ import 'package:anchor/features/notes/presentation/editor/rich_text_editor.dart'
 import 'package:anchor/features/notes/presentation/editor/slash_hint.dart';
 import 'package:anchor/features/notes/presentation/editor/slash_menu.dart';
 import 'package:anchor/features/notes/presentation/note_edit_screen.dart';
+import 'package:anchor/features/notes/presentation/widgets/note_attachments_strip.dart';
 import 'package:anchor/features/notes/presentation/widgets/note_chips.dart';
+import 'package:anchor/features/notes/presentation/widgets/note_header.dart';
+import 'package:anchor/features/notes/presentation/widgets/picture_tile.dart';
 import 'package:anchor/features/notes/presentation/widgets/read_only_bottom_bar.dart';
 import 'package:anchor/features/reminders/data/notification_gateway.dart';
 import 'package:anchor/features/reminders/domain/reminder_schedule.dart';
@@ -50,6 +55,8 @@ class MockAttachmentsRepository extends Mock
     implements NoteAttachmentsRepository {}
 
 class MockPreferencesRepository extends Mock implements PreferencesRepository {}
+
+class MockNoteCopier extends Mock implements NoteCopier {}
 
 class _TagFilter extends SelectedTagFilter {
   _TagFilter(this.tagId);
@@ -111,6 +118,8 @@ void main() {
     String? tagFilter,
     String searchQuery = '',
     List<String> foldedNotes = const [],
+    bool isOnline = true,
+    NoteCopier? copier,
   }) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -129,6 +138,8 @@ void main() {
           activeUserIdProvider.overrideWith(FakeActiveUserId.new),
           notificationGatewayProvider.overrideWithValue(gateway),
           selectedTagFilterProvider.overrideWith(() => _TagFilter(tagFilter)),
+          isOnlineProvider.overrideWithValue(isOnline),
+          if (copier != null) noteCopierProvider.overrideWithValue(copier),
         ],
         child: MaterialApp.router(
           localizationsDelegates: const [
@@ -162,6 +173,13 @@ void main() {
                       note: note,
                       noteId: note?.id,
                       searchQuery: searchQuery,
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'note/:id',
+                    builder: (_, state) => NoteEditScreen(
+                      note: state.extra as Note?,
+                      noteId: state.pathParameters['id'],
                     ),
                   ),
                 ],
@@ -2604,6 +2622,155 @@ void main() {
       expect(barButton('Edit'), findsNothing);
       expect(calls.launched, isEmpty);
       expect(calls.haptics, ['HapticFeedbackType.selectionClick']);
+    });
+  });
+
+  group('Make a copy', () {
+    const original = Note(id: 'n1', title: 'Groceries', content: null);
+    late MockNoteCopier copier;
+
+    setUp(() {
+      copier = MockNoteCopier();
+      when(() => notesRepo.deleteForever(any())).thenAnswer((_) async {});
+    });
+
+    // pumpAndSettle would wait out the snackbar.
+    Future<void> makeCopy(WidgetTester tester) async {
+      await tester.tap(barButton('More'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Make a copy'));
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+    }
+
+    String location(WidgetTester tester) => GoRouter.of(
+      tester.element(find.byType(NoteEditScreen)),
+    ).routerDelegate.currentConfiguration.uri.path;
+
+    testWidgets('offline, it says to connect and copies nothing', (
+      tester,
+    ) async {
+      await pumpScreen(tester, note: original, isOnline: false, copier: copier);
+      await tester.pumpAndSettle();
+
+      await makeCopy(tester);
+
+      expect(
+        find.text('Connect to the internet to make a copy.'),
+        findsOneWidget,
+      );
+      verifyNever(() => copier.copy(any()));
+      await drainSnackbar(tester);
+    });
+
+    testWidgets('opens the copy, and Undo deletes it and goes back to the '
+        'original', (tester) async {
+      when(() => copier.copy('n1')).thenAnswer((_) async => 'copy-1');
+      when(
+        () => notesRepo.getNote('copy-1'),
+      ).thenAnswer((_) async => const Note(id: 'copy-1', title: 'Groceries'));
+      await pumpScreen(tester, note: original, copier: copier);
+      await tester.pumpAndSettle();
+
+      await makeCopy(tester);
+
+      expect(location(tester), '/note/copy-1');
+      expect(find.text('Copy made. You’re editing the copy.'), findsOneWidget);
+
+      await tester.tap(find.text('Undo'));
+      await tester.pumpAndSettle();
+
+      verify(() => notesRepo.deleteForever(['copy-1'])).called(1);
+      expect(location(tester), '/note/n1');
+      await drainSnackbar(tester);
+    });
+
+    testWidgets('a file deleted while its Undo shows is deleted before the '
+        'copy is made', (tester) async {
+      final calls = <String>[];
+      when(() => attachmentsRepo.watchAttachments('n1')).thenAnswer(
+        (_) => Stream.value(const [
+          NoteAttachment(
+            id: 'a1',
+            noteId: 'n1',
+            type: AttachmentType.image,
+            originalFilename: 'harbor.jpg',
+            mimeType: 'image/jpeg',
+            fileSize: 1200,
+          ),
+        ]),
+      );
+      when(
+        () => attachmentsRepo.currentIdOf(any()),
+      ).thenAnswer((call) => call.positionalArguments.first as String);
+      final deleting = Completer<void>();
+      when(() => attachmentsRepo.deleteAttachment('n1', 'a1')).thenAnswer((_) {
+        calls.add('delete a1');
+        return deleting.future;
+      });
+      when(() => copier.copy('n1')).thenAnswer((_) async {
+        calls.add('copy');
+        return 'copy-1';
+      });
+      when(
+        () => notesRepo.getNote('copy-1'),
+      ).thenAnswer((_) async => const Note(id: 'copy-1', title: 'Groceries'));
+      await pumpScreen(tester, note: original, copier: copier);
+      await tester.pumpAndSettle();
+
+      tester.widget<PictureTile>(find.byType(PictureTile)).onDelete!();
+      await tester.pump();
+      expect(find.text('Picture deleted'), findsOneWidget);
+      await tester.tap(barButton('More'));
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(calls, isEmpty);
+      await tester.tap(find.text('Make a copy'));
+      await tester.pump();
+
+      expect(calls, ['delete a1']);
+      deleting.complete();
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      expect(calls, ['delete a1', 'copy']);
+      expect(location(tester), '/note/copy-1');
+      await drainSnackbar(tester);
+    });
+
+    testWidgets('the note can’t be edited while the copy is being made, and '
+        'can again if it fails', (tester) async {
+      final copying = Completer<String>();
+      when(() => copier.copy('n1')).thenAnswer((_) => copying.future);
+      await pumpScreen(tester, note: original, copier: copier);
+      await tester.pumpAndSettle();
+      List<bool> canEdit() => [
+        !tester.widget<TextField>(titleField).readOnly,
+        tester.widget<RichTextEditor>(find.byType(RichTextEditor)).canEdit,
+        !tester.widget<NoteTagRow>(find.byType(NoteTagRow)).readOnly,
+        tester
+            .widget<NoteAttachmentsStrip>(find.byType(NoteAttachmentsStrip))
+            .canEdit,
+      ];
+      expect(canEdit(), everyElement(isTrue));
+
+      await makeCopy(tester);
+
+      expect(canEdit(), everyElement(isFalse));
+      expect(barButton('More'), findsNothing);
+      expect(find.bySemanticsLabel('Making a copy…'), findsOneWidget);
+
+      copying.completeError(Exception('offline'));
+      await tester.pump();
+      await tester.pump();
+
+      expect(canEdit(), everyElement(isTrue));
+      expect(barButton('More'), findsOneWidget);
+      expect(find.textContaining('Couldn’t make a copy.'), findsOneWidget);
+      await drainSnackbar(tester);
     });
   });
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/motion/haptics.dart';
@@ -10,11 +11,12 @@ import '../../../../core/widgets/grouped_list.dart';
 import '../../../../core/widgets/pressable.dart';
 import '../../../../core/widgets/sliver_masonry.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../settings/presentation/theme_preferences_controller.dart';
 import '../../domain/note.dart';
 import '../notes_list_controller.dart';
 import 'card_body.dart';
 
-class NotesBoard extends StatelessWidget {
+class NotesBoard extends ConsumerWidget {
   const NotesBoard({
     super.key,
     required this.groups,
@@ -43,8 +45,10 @@ class NotesBoard extends StatelessWidget {
   final VoidCallback? onToggleFold;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final density = context.density;
+    // Pictures change every card's height, so the masonry measures anew.
+    final pictures = ref.watch(cardPicturesControllerProvider);
     final slivers = <Widget>[
       ...header,
       if (empty case final empty?)
@@ -70,12 +74,12 @@ class NotesBoard extends StatelessWidget {
             if (!group.isFolded)
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                sliver: _cards(context, group.notes),
+                sliver: _cards(context, group.notes, pictures),
               ),
           ] else
             SliverPadding(
               padding: EdgeInsets.fromLTRB(16, density.space8, 16, 0),
-              sliver: _cards(context, group.notes),
+              sliver: _cards(context, group.notes, pictures),
             ),
     ];
     return ReorderAnimationScope(
@@ -85,12 +89,12 @@ class NotesBoard extends StatelessWidget {
     );
   }
 
-  Widget _cards(BuildContext context, List<Note> notes) {
+  Widget _cards(BuildContext context, List<Note> notes, bool pictures) {
     final count = notes.length;
     final gap = context.density.space12;
     return switch (layout) {
       CardLayout.masonry => SliverMasonry(
-        itemKeys: [for (final note in notes) note.id],
+        itemKeys: [for (final note in notes) (note.id, pictures)],
         mainAxisSpacing: gap,
         crossAxisSpacing: gap,
         itemBuilder: (context, i) => cardBuilder(notes[i], i),

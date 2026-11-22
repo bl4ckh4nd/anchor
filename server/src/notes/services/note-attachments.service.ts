@@ -6,7 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
-import type { Prisma } from 'src/generated/prisma/client';
+import type { NoteAttachment, Prisma } from 'src/generated/prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NoteAccessService } from './note-access.service';
 import {
@@ -20,6 +20,7 @@ import { deleteFileIfExists } from '../../common/utils/file-system.util';
 import {
   assertValidAttachmentFile,
   attachmentTypeForMime,
+  copyAttachmentFile,
   noteAttachmentDir,
   removeNoteAttachmentDir,
   writeAttachmentFile,
@@ -229,6 +230,33 @@ export class NoteAttachmentsService {
     });
 
     return this.findAll(userId, noteId);
+  }
+
+  /** Copies the files into [toNoteId]'s folder; the rows to create come back. */
+  async copyFiles(
+    attachments: NoteAttachment[],
+    toNoteId: string,
+    uploadedByUserId: string,
+  ): Promise<Prisma.NoteAttachmentCreateManyInput[]> {
+    const rows: Prisma.NoteAttachmentCreateManyInput[] = [];
+    for (const attachment of attachments) {
+      const storedFilename = await copyAttachmentFile(
+        this.attachmentDir(attachment.noteId),
+        attachment.storedFilename,
+        this.attachmentDir(toNoteId),
+      );
+      rows.push({
+        noteId: toNoteId,
+        uploadedByUserId,
+        type: attachment.type,
+        originalFilename: attachment.originalFilename,
+        storedFilename,
+        mimeType: attachment.mimeType,
+        fileSize: attachment.fileSize,
+        position: attachment.position,
+      });
+    }
+    return rows;
   }
 
   deleteAllForNote(noteId: string): Promise<void> {

@@ -65,7 +65,7 @@ interface HistoryViewProps {
   saving: boolean;
   onClose: () => void;
   onRestored: (note: Note) => void;
-  flushEdits: () => Promise<void>;
+  flushEdits: () => Promise<unknown>;
 }
 
 /** “Edited just now”, “Edited 12 min ago”, “Edited today at 2:14 PM”. */

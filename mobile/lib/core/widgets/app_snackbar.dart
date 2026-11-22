@@ -52,6 +52,12 @@ abstract final class AppSnackbar {
     }
     _current = _SnackbarController(overlay, data);
   }
+
+  /// Closes the snackbar now, so its [show] `onClosed` runs.
+  static void dismiss() {
+    final current = _current;
+    if (current != null && current.isShowing) current.removed();
+  }
 }
 
 class _SnackData {

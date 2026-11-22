@@ -30,3 +30,15 @@ class DisplayDensityController extends _$DisplayDensityController {
     await repository.setDisplayDensity(density.name);
   }
 }
+
+@Riverpod(keepAlive: true)
+class CardPicturesController extends _$CardPicturesController {
+  @override
+  bool build() => ref.watch(appBootstrapProvider).showCardPictures;
+
+  Future<void> setShown(bool isShown) async {
+    state = isShown;
+    final repository = ref.read(preferencesRepositoryProvider);
+    await repository.setShowCardPictures(isShown);
+  }
+}

@@ -258,6 +258,25 @@ describe('account deletion', () => {
       });
       expect(row.uploadedByUserId).toBe(friend.id);
     });
+
+    it('keeps the copies people made of their notes, files included', async () => {
+      const note = await user.notes.create({ title: 'user owns this' });
+      await user.attachments.upload(note.id, 'photo.png');
+      await user.shares.grant(note.id, friend.id, 'viewer');
+      const copy = await friend.notes.duplicate(note.id);
+      const [attachment] = await friend.attachments.list(copy.id);
+
+      await deleteAccount(user, PASSWORD).expect(200);
+
+      await waitUntilGone(path.join(ctx.storage.attachmentsDir, note.id));
+      expect(await friend.notes.read(copy.id)).toMatchObject({
+        title: 'user owns this',
+        attachmentCount: 1,
+      });
+      await friend.http
+        .get(`/api/notes/${copy.id}/attachments/${attachment.id}`)
+        .expect(200);
+    });
   });
 
   it('cleans up the same way when an admin deletes the account', async () => {

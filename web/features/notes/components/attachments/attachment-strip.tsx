@@ -45,6 +45,47 @@ const usePendingDeletes = create<{
     }),
 }));
 
+/** Per note: deletions still showing their Undo toast, uploads under way, and uploads that failed. */
+const deletesWaiting = new Map<string, Set<string>>();
+const attachmentWork = new Map<string, Set<Promise<unknown>>>();
+const uploadsFailed = new Map<string, Set<string>>();
+
+/** An upload tile is gone, or went through: it no longer stands for a missing file. */
+function forgetFailedUpload(key: string) {
+  for (const [noteId, keys] of uploadsFailed)
+    if (keys.delete(key) && !keys.size) uploadsFailed.delete(noteId);
+}
+
+function inSet<T>(map: Map<string, Set<T>>, noteId: string) {
+  const set = map.get(noteId) ?? new Set<T>();
+  map.set(noteId, set);
+  return set;
+}
+
+function track<T>(noteId: string, work: Promise<T>) {
+  const set = inSet(attachmentWork, noteId);
+  set.add(work);
+  const done = () => {
+    set.delete(work);
+    if (!set.size && attachmentWork.get(noteId) === set)
+      attachmentWork.delete(noteId);
+  };
+  work.then(done, done);
+  return work;
+}
+
+/**
+ * Sends the note's waiting file deletions now, then waits for them and its
+ * uploads. False while a file shown on the note failed to upload.
+ */
+export async function attachmentsSettled(noteId: string) {
+  for (const toastId of [...(deletesWaiting.get(noteId) ?? [])])
+    toast.dismiss(toastId);
+  while (attachmentWork.get(noteId)?.size)
+    await Promise.allSettled(attachmentWork.get(noteId) ?? []);
+  return !uploadsFailed.get(noteId)?.size;
+}
+
 interface Drag {
   id: string;
   kind: Kind;
@@ -197,7 +238,10 @@ export function AttachmentStrip({
     isMounted.current = true;
     return () => {
       isMounted.current = false;
-      for (const u of uploadsRef.current) if (u.preview) releaseBlobUrl(u.file);
+      for (const u of uploadsRef.current) {
+        forgetFailedUpload(u.key);
+        if (u.preview) releaseBlobUrl(u.file);
+      }
     };
   }, []);
 
@@ -213,6 +257,7 @@ export function AttachmentStrip({
   };
 
   const removeUpload = (upload: Upload) => {
+    forgetFailedUpload(upload.key);
     flip.prepare();
     setUploads((list) => list.filter((x) => x.key !== upload.key));
     letGo(upload);
@@ -235,11 +280,13 @@ export function AttachmentStrip({
         ["attachments", id],
         (list = []) => [saved, ...list.filter((a) => a.id !== saved.id)],
       );
+      forgetFailedUpload(upload.key);
       setUploads((list) => list.filter((x) => x.key !== upload.key));
       letGo(upload);
       return "added";
     } catch {
       if (signal.aborted) return "canceled";
+      inSet(uploadsFailed, id).add(upload.key);
       patch(upload.key, { failed: true, progress: null });
       return "failed";
     }
@@ -281,14 +328,17 @@ export function AttachmentStrip({
         return;
       }
       const tried: { upload: Upload; isAdded: boolean }[] = [];
-      await eachLimited(
-        fresh,
-        async (upload) => {
-          const outcome = await send(id, upload);
-          if (outcome !== "canceled")
-            tried.push({ upload, isAdded: outcome === "added" });
-        },
-        3,
+      await track(
+        id,
+        eachLimited(
+          fresh,
+          async (upload) => {
+            const outcome = await send(id, upload);
+            if (outcome !== "canceled")
+              tried.push({ upload, isAdded: outcome === "added" });
+          },
+          3,
+        ),
       );
       queryClient.invalidateQueries({ queryKey: ["notes"] });
 
@@ -321,7 +371,7 @@ export function AttachmentStrip({
     try {
       const id = await ensureNoteId();
       if (!id) return patch(upload.key, { failed: true });
-      const outcome = await send(id, again);
+      const outcome = await track(id, send(id, again));
       if (outcome === "canceled") return;
       if (outcome === "added")
         queryClient.invalidateQueries({ queryKey: ["notes"] });
@@ -351,13 +401,19 @@ export function AttachmentStrip({
     flip.prepare();
     mark(attachment.id, true);
     const name = shortFileName(attachment.originalFilename);
+    const toastId = `delete-${attachment.id}`;
+    const waiting = inSet(deletesWaiting, id);
+    waiting.add(toastId);
     toast.success(`${name} deleted`, {
+      id: toastId,
       undo: () => {
+        waiting.delete(toastId);
         flip.prepare();
         mark(attachment.id, false);
       },
       onClose: () => {
-        deleteAttachment(id, attachment.id).then(
+        waiting.delete(toastId);
+        track(id, deleteAttachment(id, attachment.id)).then(
           () => {
             queryClient.setQueryData<NoteAttachment[]>(
               ["attachments", id],
@@ -438,7 +494,8 @@ export function AttachmentStrip({
         reorderAttachments(noteId as string, ids),
       );
       lastOrderSent.current = sending.catch(() => {});
-      return sending;
+      // A copy made meanwhile waits for the order shown.
+      return noteId ? track(noteId, sending) : sending;
     },
     onError: (_error, { before }) => {
       queryClient.setQueryData(["attachments", noteId], before);

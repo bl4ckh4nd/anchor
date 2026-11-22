@@ -371,6 +371,23 @@ describe("flushUpdate", () => {
 });
 
 describe("createNoteSaveQueue", () => {
+  it("says the edits were not saved when the server refused the last one", async () => {
+    const queue = makeQueue({ save: () => Promise.resolve(gone) });
+    queue.push(makeDraft("a"));
+    expect(await queue.saved()).toBe(false);
+    expect(queue.newestDraft()).toBeNull();
+  });
+
+  it("says the edits were saved once a later edit gets through", async () => {
+    let answer: SaveOutcome = gone;
+    const queue = makeQueue({ save: () => Promise.resolve(answer) });
+    queue.push(makeDraft("a"));
+    await queue.settled();
+    answer = { status: "saved", note: makeNote(2) };
+    queue.push(makeDraft("b"));
+    expect(await queue.saved()).toBe(true);
+  });
+
   it("sends only the newest edit made while a save is running", async () => {
     const gate = deferred<SaveOutcome>();
     const sent: string[] = [];

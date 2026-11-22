@@ -41,6 +41,16 @@ class NoteAttachmentsStrip extends ConsumerStatefulWidget {
   final String? currentUserId;
   final VoidCallback onAdd;
 
+  /// Deletions under way, per note.
+  static final _deleting = <String, Set<Future<void>>>{};
+
+  /// Sends a deletion still showing its Undo now, then waits for the note's
+  /// deletions to reach the phone's database.
+  static Future<void> settle(String noteId) async {
+    AppSnackbar.dismiss();
+    await Future.wait([...?_deleting[noteId]]);
+  }
+
   @override
   ConsumerState<NoteAttachmentsStrip> createState() =>
       _NoteAttachmentsStripState();
@@ -87,7 +97,14 @@ class _NoteAttachmentsStripState extends ConsumerState<NoteAttachmentsStrip> {
         if (mounted) setState(() => _pendingRemovalIds.remove(attachment.id));
       },
       onClosed: (undone) {
-        if (!undone) unawaited(repo.deleteAttachment(noteId, attachment.id));
+        if (undone) return;
+        final deleting = NoteAttachmentsStrip._deleting.putIfAbsent(
+          noteId,
+          () => {},
+        );
+        final work = repo.deleteAttachment(noteId, attachment.id);
+        deleting.add(work);
+        unawaited(work.whenComplete(() => deleting.remove(work)));
       },
     );
   }

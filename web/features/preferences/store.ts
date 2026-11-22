@@ -15,6 +15,7 @@ interface NotesPreferences {
   sortBy: SortBy;
   sortOrder: SortOrder;
   openArchivedTagIds: string[];
+  showCardPictures: boolean;
 }
 
 interface TagsPreferences {
@@ -58,6 +59,7 @@ const defaultNotesPreferences: NotesPreferences = {
   sortBy: "updatedAt",
   sortOrder: "desc",
   openArchivedTagIds: [],
+  showCardPictures: true,
 };
 
 const defaultTagsPreferences: TagsPreferences = {
