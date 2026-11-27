@@ -8,11 +8,11 @@ node_modules
 coverage
 .nyc_output
 
-# Next.js
+# Local build output
 .next
-out
-build
 dist
+.tanstack
+build
 
 # Production
 *.log
@@ -37,12 +37,8 @@ pnpm-debug.log*
 .env.test.local
 .env.production.local
 
-# Vercel
-.vercel
-
 # Typescript
 *.tsbuildinfo
-next-env.d.ts
 
 # IDE
 .vscode

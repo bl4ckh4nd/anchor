@@ -1,12 +1,12 @@
 "use client";
 
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { useRouter } from "next/navigation";
 import * as React from "react";
 import { Toaster } from "@/components/ui/toast";
 import { usePreferencesStore } from "@/features/preferences";
 import { useOnlineStatus, useSync, useWarnWhenUnsaved } from "@/features/sync";
 import { useTrackPageChanges } from "@/lib/app-history";
+import { useRouter } from "@/lib/app-router";
 import { findNewNoteButton, rememberNewNoteButton } from "@/lib/morph";
 import { hasShortcutKey } from "@/lib/platform";
 import { cn } from "@/lib/utils";

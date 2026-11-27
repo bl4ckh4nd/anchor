@@ -1,8 +1,8 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useColumns } from "@/features/notes/hooks/use-columns";
+import { useSearchParams } from "@/lib/app-router";
 import { NotesView } from "./notes-view";
 
 export default function NotesPage() {
@@ -15,6 +15,5 @@ export default function NotesPage() {
         Pick a note from the list, or press N to start a new one.
       </EmptyState>
     );
-  // Next keeps the page mounted when only the tag changes.
   return <NotesView key={tagId ?? ""} tagId={tagId} />;
 }

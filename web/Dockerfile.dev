@@ -11,12 +11,10 @@ ENV pnpm_config_store_dir=/pnpm/store
 
 # Copy package files first for better caching
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY vendor/ ./vendor/
 
 # Install all dependencies (including devDependencies)
 RUN pnpm install --frozen-lockfile
-
-# Copy config files needed for Next.js
-COPY next.config.ts tsconfig.json postcss.config.mjs components.json ./
 
 # Source code directories will be mounted as volumes
 # No build step needed for development
@@ -25,10 +23,9 @@ EXPOSE 3000
 
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
-ENV NEXT_TELEMETRY_DISABLED=1
 
 # Healthcheck
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=30s \
   CMD curl -f http://localhost:3000/ || exit 1
 
-CMD ["pnpm", "dev"]
+CMD ["pnpm", "dev", "--host", "0.0.0.0"]

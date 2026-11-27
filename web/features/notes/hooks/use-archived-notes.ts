@@ -1,9 +1,9 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSearchParams } from "next/navigation";
 import * as React from "react";
 import { usePreferencesStore } from "@/features/preferences";
+import { useSearchParams } from "@/lib/app-router";
 import { archivedNotesQuery } from "../queries";
 import type { Note } from "../types";
 import { QUERY_PARAM } from "../url-with-query";

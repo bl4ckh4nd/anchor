@@ -2,7 +2,6 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { HTTPError } from "ky";
-import Link from "next/link";
 import { LoadFailedRow } from "@/components/ui/empty-state";
 import { FormAlert } from "@/components/ui/field";
 import { RadioCards } from "@/components/ui/radio-cards";
@@ -14,6 +13,7 @@ import {
   SectionHeader,
   useSaveStatus,
 } from "@/features/settings/components/settings-blocks";
+import { Link } from "@/lib/app-router";
 import { useRetry } from "@/lib/hooks/use-retry";
 import { plural } from "@/lib/utils";
 import {

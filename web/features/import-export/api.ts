@@ -18,9 +18,13 @@ export async function downloadExport(
   // Export can take a while for large accounts; disable the 30s default
   const response = await api.get("api/export", {
     searchParams: { format },
+    headers: { "X-Anchor-Export-Parts": "1" },
     timeout: false,
   });
-  const blob = await response.blob();
+  const blob =
+    response.status === 202
+      ? await downloadExportParts(response)
+      : await response.blob();
 
   const disposition = response.headers.get("Content-Disposition") ?? "";
   const serverName = disposition.match(/filename="([^"]+)"/)?.[1];
@@ -39,6 +43,44 @@ export async function downloadExport(
   link.click();
   // Revoking synchronously can cancel the download in some browsers
   setTimeout(() => URL.revokeObjectURL(url), 30_000);
+}
+
+async function downloadExportParts(response: Response): Promise<Blob> {
+  const { id, size, chunkSize } = (await response.json()) as {
+    id: string;
+    size: number;
+    chunkSize: number;
+  };
+  if (
+    typeof id !== "string" ||
+    !/^[a-z0-9]{1,64}$/.test(id) ||
+    !Number.isSafeInteger(size) ||
+    size <= 0 ||
+    !Number.isSafeInteger(chunkSize) ||
+    chunkSize <= 0 ||
+    chunkSize > size
+  )
+    throw new Error("Invalid export download");
+
+  const parts: Blob[] = [];
+  for (let offset = 0; offset < size; offset += chunkSize) {
+    const part = await api.get(`api/export/${id}`, {
+      searchParams: { offset },
+      timeout: false,
+    });
+    const end = Math.min(offset + chunkSize, size);
+    if (
+      part.status !== 206 ||
+      part.headers.get("Content-Range") !== `bytes ${offset}-${end - 1}/${size}`
+    ) {
+      await part.body?.cancel();
+      throw new Error("Invalid export part");
+    }
+    const bytes = await part.blob();
+    if (bytes.size !== end - offset) throw new Error("Incomplete export part");
+    parts.push(bytes);
+  }
+  return new Blob(parts, { type: "application/zip" });
 }
 
 export function toImportNoteItem(

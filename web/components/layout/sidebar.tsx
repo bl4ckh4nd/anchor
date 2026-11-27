@@ -19,8 +19,6 @@ import {
   Sun,
   Trash2,
 } from "lucide-react";
-import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTheme } from "next-themes";
 import * as React from "react";
 import { Avatar } from "@/components/ui/avatar";
@@ -51,6 +49,12 @@ import {
   useTagOrder,
   useTags,
 } from "@/features/tags";
+import {
+  Link,
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from "@/lib/app-router";
 import { TAG_COLORS } from "@/lib/design/tokens";
 import { useLastShown } from "@/lib/hooks/use-last-shown";
 import { rememberNewNoteButton } from "@/lib/morph";
@@ -312,11 +316,7 @@ export function Sidebar({
       )}
     >
       <div className="flex min-h-10.5 items-center pt-0.5 pr-0.5 pb-3 pl-1.5">
-        <Brand
-          href="/notes"
-          onNavigate={onNavigate}
-          nameClassName={fadeClass}
-        />
+        <Brand href="/notes" onNavigate={onNavigate} compact={isNarrow} />
       </div>
 
       <Tip label="New note (N)" side="right" isDisabled={!isNarrow} isFocusOnly>

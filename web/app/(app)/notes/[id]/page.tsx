@@ -2,7 +2,6 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { HTTPError } from "ky";
-import { useParams, usePathname } from "next/navigation";
 import { useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
@@ -28,17 +27,13 @@ import {
 } from "@/features/notes";
 import type { RichTextEditorHandle } from "@/features/notes/components/editor";
 import { createTag, nextTagColor, type Tag, useTags } from "@/features/tags";
+import { usePathname } from "@/lib/app-router";
 import { useDelayedFlag } from "@/lib/hooks/use-delayed-flag";
 import { swapView } from "@/lib/morph";
 import { cn } from "@/lib/utils";
 
-export default function NoteEditorPage() {
-  const params = useParams();
+export default function NoteEditorPage({ routeId }: { routeId: string }) {
   const pathname = usePathname();
-  // After a create in place, params.id stays "new"; the address has the id.
-  const routeId = pathname.startsWith("/notes/")
-    ? decodeURIComponent(pathname.slice("/notes/".length))
-    : (params.id as string);
   const [newVisit, setNewVisit] = useState(0);
   const [createdHere, setCreatedHere] = useState<string | null>(null);
   const [seenPath, setSeenPath] = useState(pathname);

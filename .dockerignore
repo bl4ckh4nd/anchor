@@ -6,6 +6,8 @@
 # Local configuration and logs
 .env
 .env.*
+**/.env
+**/.env.*
 *.log
 *.pid
 *.seed
@@ -14,20 +16,18 @@
 # Dependency and build outputs
 **/node_modules
 **/.next
+web/.tanstack
 **/dist
 **/build
 **/coverage
 **/.turbo
 **/.vercel
-**/.dart_tool
-**/.flutter-plugins
-**/.flutter-plugins-dependencies
 **/android/.gradle
 **/ios/Pods
 **/*.tsbuildinfo
 
 # Mobile app
-mobile
+mobile-kotlin
 
 # Files not needed by the Dockerfile
 docker-compose*.yml

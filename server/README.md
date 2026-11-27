@@ -1,6 +1,8 @@
-# Anchor Server
+# Bordo Server
 
-Nest.js backend for Anchor application.
+Previous NestJS backend for Bordo. It remains available for compatibility
+and migration testing. See the [hosting guide](../docs/hosting.md) for
+the current Convex backend.
 
 ## Prerequisites
 

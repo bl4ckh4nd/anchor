@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Bordo">
+  <title>Bordo</title>
+  <path fill="#d9673a" fill-rule="evenodd" d="M8 10a6 6 0 0 1 12 0v14h26l10 10v14a12 12 0 0 1-12 12H18A10 10 0 0 1 8 50ZM20 36v12h18a6 6 0 0 0 0-12Z"/>
+  <path fill="#a44004" d="M46 24v10h10Z"/>
+</svg>

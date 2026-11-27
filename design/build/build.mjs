@@ -1,8 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { dartPatterns, dartTokens, parsePath } from "./dart.mjs";
+import { composeCardTypography, composeDensity, composeNotePalettes, composePatternVector } from "./compose.mjs";
 import dtcg from "./dtcg.mjs";
+import { parsePath } from "./svg-path.mjs";
 import { swiftIcons, swiftTokens } from "./swift.mjs";
 
 const ROOT = path.resolve(
@@ -248,47 +249,35 @@ const lucideNode = async (name) => {
   if (!renamed) throw new Error(`No icon data in lucide-react for "${name}"`);
   return lucideNode(renamed[1]);
 };
-const lucide = async (name) =>
-  (await lucideNode(name))
-    .map(
-      ([tag, attrs]) =>
-        `<${tag} ${Object.entries(attrs)
-          .filter(([k]) => k !== "key")
-          .map(([k, v]) => `${k}='${v}'`)
-          .join(" ")}/>`,
-    )
-    .join("");
+const svgNodes = (nodes) =>
+  nodes.map(([tag, attrs, children]) => {
+    const attributes = Object.entries(attrs)
+      .filter(([key]) => key !== "key")
+      .map(([key, value]) => `${key}='${value}'`)
+      .join(" ");
+    return children
+      ? `<${tag} ${attributes}>${svgNodes(children)}</${tag}>`
+      : `<${tag} ${attributes}/>`;
+  }).join("");
+const patternTile = async (kind, color) => {
+  if (kind === "dots")
+    return { width: 20, height: 20, nodes: [["circle", { cx: 10, cy: 10, r: 2, fill: color }]] };
+  if (kind === "grid")
+    return { width: 24, height: 24, nodes: [["path", { d: "M0.5 0V24M0 0.5H24", stroke: color, "stroke-width": 1, fill: "none" }]] };
+  if (kind === "lines")
+    return { width: 24, height: 24, nodes: [["path", { d: "M0 23.5H24", stroke: color, "stroke-width": 1 }]] };
+  if (kind === "waves")
+    return { width: 40, height: 40, nodes: [["path", { d: "M0 20Q10 10 20 20T40 20", stroke: color, "stroke-width": 2, fill: "none" }]] };
+  const [, name, rotation] = kind.split(":");
+  const inner = await lucideNode(name);
+  const icon = (x, y) => ["g", { transform: `translate(${x} ${y}) rotate(${rotation} 12 12)` }, inner];
+  const stroke = { fill: "none", stroke: color, "stroke-width": 2, "stroke-linecap": "round", "stroke-linejoin": "round" };
+  return { width: 60, height: 120, nodes: [["g", stroke, [icon(8, 8), icon(38, 68), icon(-22, 68)]]] };
+};
 const pattern = async (kind, color) => {
   if (!kind) return "none";
-  if (kind === "dots")
-    return svgUri(20, 20, `<circle cx='10' cy='10' r='2' fill='${color}'/>`);
-  if (kind === "grid")
-    return svgUri(
-      24,
-      24,
-      `<path d='M0.5 0V24M0 0.5H24' stroke='${color}' stroke-width='1' fill='none'/>`,
-    );
-  if (kind === "lines")
-    return svgUri(
-      24,
-      24,
-      `<path d='M0 23.5H24' stroke='${color}' stroke-width='1'/>`,
-    );
-  if (kind === "waves")
-    return svgUri(
-      40,
-      40,
-      `<path d='M0 20Q10 10 20 20T40 20' stroke='${color}' stroke-width='2' fill='none'/>`,
-    );
-  const [, name, rotation] = kind.split(":"),
-    inner = await lucide(name);
-  const icon = (x, y) =>
-    `<g transform='translate(${x} ${y}) rotate(${rotation} 12 12)'>${inner}</g>`;
-  return svgUri(
-    60,
-    120,
-    `<g fill='none' stroke='${color}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>${icon(8, 8)}${icon(38, 68)}${icon(-22, 68)}</g>`,
-  );
+  const { width, height, nodes } = await patternTile(kind, color);
+  return svgUri(width, height, svgNodes(nodes));
 };
 const patternSize = (kind) =>
   !kind
@@ -377,27 +366,13 @@ export const TAILWIND_THEME = ${json({
 })};
 `;
 
-const iconNodes = {};
-for (const bg of CATALOG.backgrounds.patterns.filter((b) =>
-  b.kind.startsWith("icon:"),
-)) {
-  const name = bg.kind.split(":")[1];
-  iconNodes[name] = await lucideNode(name);
-}
-const DART_HEAD = HEAD.replace("design/build/build.mjs", "design/build");
-out["mobile/lib/core/theme/tokens/anchor_tokens.dart"] = dartTokens({
+const SWIFT_HEAD = HEAD.replace("design/build/build.mjs", "design/build");
+out["mobile-kotlin/iosApp/ShareExtension/AnchorTokens.swift"] = swiftTokens({
   dtcg,
   set,
   resolved,
   base,
-  HEAD: DART_HEAD,
-});
-out["mobile/ios/ShareExtension/AnchorTokens.swift"] = swiftTokens({
-  dtcg,
-  set,
-  resolved,
-  base,
-  HEAD: DART_HEAD,
+  HEAD: SWIFT_HEAD,
 });
 // The icons the share extension draws, by their Swift name.
 const SHARE_ICONS = {
@@ -411,16 +386,22 @@ const shareIcons = {};
 for (const [name, lucideName] of Object.entries(SHARE_ICONS)) {
   shareIcons[name] = await lucideNode(lucideName);
 }
-out["mobile/ios/ShareExtension/AnchorIcon.swift"] = swiftIcons({
+out["mobile-kotlin/iosApp/ShareExtension/AnchorIcon.swift"] = swiftIcons({
   icons: shareIcons,
   parsePath,
-  HEAD: DART_HEAD,
+  HEAD: SWIFT_HEAD,
 });
-out["mobile/lib/core/theme/tokens/anchor_patterns.dart"] = dartPatterns({
-  set,
-  HEAD: DART_HEAD,
-  iconNodes,
-});
+
+const composeMain = "mobile-kotlin/shared/src/commonMain";
+out[`${composeMain}/kotlin/anchor/NoteCardTypography.kt`] = composeCardTypography(base, dtcg, HEAD);
+out[`${composeMain}/kotlin/anchor/AnchorDensity.kt`] = composeDensity(baseCss, HEAD);
+out[`${composeMain}/kotlin/anchor/NotePalette.kt`] = composeNotePalettes(BGS, HIGHLIGHTS, css, HEAD);
+for (const { id, kind } of CATALOG.backgrounds.patterns) {
+  out[`${composeMain}/composeResources/drawable/${id}.xml`] = composePatternVector(
+    await patternTile(kind, "#FFFFFF"),
+    HEAD,
+  );
+}
 
 const stale = [];
 for (const [rel, text] of Object.entries(out)) {

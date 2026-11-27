@@ -1,5 +1,5 @@
 name: Bug report
-description: Something in Anchor does not work as it should.
+description: Something in Bordo does not work as it should.
 title: "[Bug] "
 labels: ["bug"]
 body:
@@ -8,14 +8,14 @@ body:
       value: |
         Thanks for taking the time to report a bug. A clear report with steps and logs is the fastest way to get it fixed. Reports without steps to reproduce may be closed.
 
-        For setup help or questions, ask on [Discord](https://discord.gg/sAfqjy8EYK) instead.
+        For setup help, start with the [Bordo documentation](https://github.com/bl4ckh4nd/bordo/blob/main/README.md).
 
   - type: checkboxes
     id: checks
     attributes:
       label: Before you start
       options:
-        - label: I searched the [existing issues](https://github.com/ZhFahim/anchor/issues?q=is%3Aissue) and this bug is not reported yet.
+        - label: I searched the [existing issues](https://github.com/bl4ckh4nd/bordo/issues?q=is%3Aissue) and this bug is not reported yet.
           required: true
         - label: I am on the latest release of the app and the server.
           required: true
@@ -117,7 +117,7 @@ body:
       description: |
         Logs help a lot, and crash reports need them.
         - **Phone app:** open Settings, Logs, tap **•••**, choose **Save to a file**, then attach the file here.
-        - **Server:** run `docker logs anchor --tail 200` right after the bug happens and paste the output.
+        - **Server:** collect the last 200 lines from the affected Compose service and paste the relevant output.
         - **Web app:** open the browser console (F12) and paste any red errors.
 
         Check the output for anything private before you post it.

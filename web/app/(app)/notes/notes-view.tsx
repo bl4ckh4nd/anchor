@@ -12,8 +12,6 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 import { AppPage, Fab, PageTitle } from "@/components/layout/app-page";
 import { newNoteHref } from "@/components/layout/sidebar";
@@ -27,6 +25,7 @@ import {
 import { SelectionBar } from "@/components/ui/selection-bar";
 import { toast } from "@/components/ui/toast";
 import { Tip } from "@/components/ui/tooltip";
+import { useAuthStore } from "@/features/auth/store";
 import {
   bulkAddTagsToNotes,
   bulkArchiveNotes,
@@ -39,6 +38,7 @@ import {
 } from "@/features/notes/api";
 import { type DropTarget, noteHref } from "@/features/notes/columns";
 import { BulkTagPicker } from "@/features/notes/components/bulk-tag-picker";
+import { FirstRunTour } from "@/features/notes/components/first-run-tour";
 import {
   NoSearchResults,
   NoteListActions,
@@ -55,6 +55,12 @@ import { useRefreshNotes } from "@/features/notes/hooks/use-refresh-notes";
 import { deletedNotesText, deleteNotesWarning } from "@/features/notes/trash";
 import type { Note } from "@/features/notes/types";
 import { tagColorStyle, useTagMap } from "@/features/tags";
+import {
+  Link,
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from "@/lib/app-router";
 import { eachLimited } from "@/lib/each";
 import { rememberNewNoteButton } from "@/lib/morph";
 import { isMac } from "@/lib/platform";
@@ -115,6 +121,7 @@ export function NotesView({
   tagId: string | null;
   openNote?: React.ReactNode;
 }) {
+  const userId = useAuthStore((state) => state.user?.id);
   const isColumns = openNote !== undefined;
   const router = useRouter();
   const pathname = usePathname();
@@ -373,6 +380,13 @@ export function NotesView({
         )
       }
     >
+      {userId &&
+        pathname === "/notes" &&
+        !tagId &&
+        !loadFailed &&
+        !isLoading &&
+        !searchParams.has("search") &&
+        !list.picking && <FirstRunTour key={userId} userId={userId} />}
       <NotesBoardSkeleton
         loading={
           isLoading ||

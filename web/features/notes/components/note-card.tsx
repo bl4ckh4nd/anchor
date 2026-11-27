@@ -2,7 +2,6 @@
 
 import type { SyntheticListenerMap } from "@dnd-kit/core/dist/hooks/utilities";
 import { Check, GripVertical, ImageOff, Paperclip, Users } from "lucide-react";
-import Link from "next/link";
 import * as React from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,6 +11,7 @@ import { MoreChip, TagChip } from "@/features/tags/components/tag-chip";
 import { useTagOrder } from "@/features/tags/hooks";
 import type { TagLabel } from "@/features/tags/types";
 import { sortTags } from "@/features/tags/utils";
+import { Link } from "@/lib/app-router";
 import { useHighlightPaint } from "@/lib/highlight-paint";
 import { useNearScreen } from "@/lib/hooks/use-near-screen";
 import { rememberCard } from "@/lib/morph";

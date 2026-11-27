@@ -1,8 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { type ReactNode, useEffect } from "react";
 import { useAuthStore } from "@/features/auth/store";
+import { useRouter } from "@/lib/app-router";
 
 interface AdminGuardProps {
   children: ReactNode;

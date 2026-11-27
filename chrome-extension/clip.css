@@ -1,0 +1,393 @@
+@font-face {
+	font-family: DM Sans;
+	src: url(DMSans-Variable.ttf) format("truetype");
+	font-weight: 100 1000;
+	font-display: swap;
+}
+:root {
+	color-scheme: light dark;
+	--paper: #fff;
+	--ink: #2d3142;
+	--sub: #4f5d75;
+	--soft: #e7ebf0;
+	--line: #d2dae5;
+	--line-light: #e3e8ef;
+	--action: #2d3142;
+	--action-ink: #fff;
+	--focus: #d9673a;
+	--quote: #ef8354;
+	--warn: #8f3434;
+	--warn-bg: #fceeed;
+	--good: #206845;
+	--good-bg: #e8f5ed;
+}
+@media (prefers-color-scheme: dark) {
+	:root {
+		--paper: #1b1d23;
+		--ink: #f1f4f8;
+		--sub: #bdc7d5;
+		--soft: #30343f;
+		--line: #50586b;
+		--line-light: #363b48;
+		--action: #f1f4f8;
+		--action-ink: #252a36;
+		--focus: #ef8354;
+		--warn: #ffacaa;
+		--warn-bg: #462a30;
+		--good: #a6e4bb;
+		--good-bg: #253c34;
+	}
+}
+* {
+	box-sizing: border-box;
+}
+[hidden] {
+	display: none !important;
+}
+body {
+	margin: 0;
+	width: 380px;
+	min-width: 320px;
+	max-height: 590px;
+	display: flex;
+	flex-direction: column;
+	background: var(--paper);
+	color: var(--ink);
+	font:
+		14px / 1.5 DM Sans,
+		system-ui,
+		sans-serif;
+}
+body.panel {
+	width: 100%;
+	min-width: 220px;
+	max-height: none;
+	min-height: 100dvh;
+}
+body.panel main {
+	flex: 1;
+}
+.top,
+footer {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex: none;
+	padding: 10px 16px;
+}
+.top {
+	min-height: 52px;
+}
+.brand,
+.header-actions,
+.inline,
+.composer-tools,
+.tags,
+#applied-tags {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.brand {
+	font-size: 16px;
+	gap: 4px;
+}
+#heading {
+	color: var(--sub);
+	font-size: 13px;
+}
+.header-actions {
+	margin-left: auto;
+	gap: 2px;
+}
+main {
+	padding: 4px 16px 16px;
+	overflow: auto;
+	min-height: 0;
+}
+section,
+form,
+.stack {
+	display: grid;
+	gap: 10px;
+}
+.stack:empty {
+	display: none;
+}
+h1,
+p,
+blockquote {
+	margin: 0;
+}
+h1 {
+	font-size: 18px;
+	line-height: 1.25;
+	font-weight: 700;
+	letter-spacing: -0.02em;
+}
+.muted {
+	color: var(--sub);
+}
+form label,
+.tag-picker label {
+	font-size: 13px;
+	font-weight: 600;
+}
+input,
+textarea,
+button {
+	font: inherit;
+	color: inherit;
+}
+input:not([type="checkbox"]),
+textarea {
+	width: 100%;
+	min-width: 0;
+	background: var(--paper);
+	border: 1px solid var(--line);
+	border-radius: 10px;
+	padding: 9px 11px;
+}
+input::placeholder,
+textarea::placeholder {
+	color: var(--sub);
+}
+textarea {
+	resize: vertical;
+}
+:focus-visible {
+	outline: 2px solid var(--focus);
+	outline-offset: 2px;
+}
+button {
+	cursor: pointer;
+	border: 1px solid transparent;
+	border-radius: 10px;
+	background: transparent;
+	padding: 6px 10px;
+	min-height: 34px;
+	text-align: center;
+	font-weight: 600;
+}
+button:disabled {
+	cursor: default;
+	opacity: 0.58;
+}
+button:hover:not(:disabled):not(.primary) {
+	background: var(--soft);
+}
+.primary {
+	background: var(--action);
+	color: var(--action-ink);
+	font-size: 13px;
+	min-height: 36px;
+}
+.primary:hover:not(:disabled) {
+	filter: brightness(1.12);
+}
+.secondary {
+	border-color: var(--line);
+	font-size: 13px;
+}
+.quiet {
+	justify-self: start;
+	color: var(--sub);
+	font-size: 13px;
+}
+.icon {
+	color: var(--sub);
+	display: grid;
+	place-items: center;
+	width: 34px;
+	height: 34px;
+	padding: 6px;
+}
+.icon svg {
+	width: 18px;
+	height: 18px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 1.8;
+}
+.notice {
+	border-radius: 10px;
+	background: var(--soft);
+	padding: 10px 12px;
+	font-size: 13px;
+}
+.error {
+	background: var(--warn-bg);
+	color: var(--warn);
+	margin-bottom: 10px;
+}
+.composer {
+	border: 1px solid var(--line);
+	border-radius: 14px;
+	display: grid;
+	gap: 8px;
+	padding: 12px;
+}
+.composer input,
+.composer textarea {
+	padding: 1px 0;
+	border: 0;
+	border-radius: 3px;
+}
+.composer input {
+	font-weight: 700;
+}
+blockquote,
+.source {
+	display: flex;
+	align-items: flex-start;
+	gap: 6px;
+	padding: 8px 9px 8px 12px;
+	background: var(--soft);
+	border-radius: 10px;
+}
+blockquote {
+	border-inline-start: 3px solid var(--quote);
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+blockquote span {
+	flex: 1;
+	min-width: 0;
+	max-height: 125px;
+	overflow: auto;
+}
+.remove {
+	color: var(--sub);
+	align-self: flex-start;
+	min-width: 28px;
+	min-height: 28px;
+	padding: 0;
+	font-size: 17px;
+	line-height: 1;
+}
+.source {
+	align-items: center;
+	justify-content: space-between;
+	font-size: 13px;
+}
+.source div {
+	min-width: 0;
+}
+.source strong,
+.source small {
+	display: block;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.source small {
+	color: var(--sub);
+}
+.source label {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	white-space: nowrap;
+}
+input[type="checkbox"] {
+	accent-color: var(--action);
+	width: 16px;
+	height: 16px;
+}
+.attachment {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	color: var(--sub);
+	font-size: 12px;
+}
+.attachment img {
+	width: 64px;
+	height: 64px;
+	object-fit: cover;
+	border-radius: 10px;
+	background: var(--soft);
+}
+.attachment span {
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.composer-tools,
+.tags,
+#applied-tags,
+.inline {
+	flex-wrap: wrap;
+}
+.chip {
+	border: 1px solid var(--line);
+	border-radius: 999px;
+	min-height: 28px;
+	padding: 3px 9px;
+	color: var(--sub);
+	font-size: 12px;
+}
+.applied {
+	background: var(--soft);
+	border-color: transparent;
+	color: var(--ink);
+}
+.tag-picker {
+	border: 1px solid var(--line);
+	border-radius: 10px;
+	padding: 10px;
+	display: grid;
+	gap: 6px;
+}
+#tag-results {
+	max-height: 132px;
+	overflow: auto;
+}
+#tag-results button {
+	text-align: left;
+	min-height: 30px;
+}
+footer {
+	justify-content: space-between;
+	border-top: 1px solid var(--line-light);
+	font-size: 12px;
+}
+#destination {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+footer button {
+	flex: none;
+}
+kbd {
+	font: inherit;
+	font-size: 11px;
+	margin-left: 5px;
+	opacity: 0.79;
+}
+#panel-intro p,
+.notice p {
+	margin: 4px 0;
+}
+summary {
+	cursor: pointer;
+	color: var(--sub);
+	font-size: 13px;
+}
+details form {
+	margin-top: 8px;
+}
+#done {
+	justify-items: center;
+	padding: 12px 0;
+}
+.success-mark {
+	display: grid;
+	place-items: center;
+	border-radius: 50%;
+	width: 42px;
+	height: 42px;
+	font-size: 21px;
+	color: var(--good);
+	background: var(--good-bg);
+}

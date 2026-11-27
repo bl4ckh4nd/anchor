@@ -1,36 +1,36 @@
-# Contributing to Anchor
+# Contributing to Bordo
 
-Thanks for your interest in Anchor. This guide explains how to report problems, suggest ideas and send changes so that they can be reviewed quickly.
+Thanks for your interest in Bordo. This guide explains how to report problems, suggest ideas and send changes so that they can be reviewed quickly.
 
 Every issue and pull request is read and reviewed by hand, so please make them easy to act on.
 
 ## Questions and help
 
-For help with installing, configuring or using Anchor, ask on [Discord](https://discord.gg/sAfqjy8EYK). Issues are for bugs and feature requests.
+For help installing or using Bordo, start with the [hosting guide](../docs/hosting.md) and search the [Bordo issues](https://github.com/bl4ckh4nd/bordo/issues). Use the repository's forms for bugs and feature requests.
 
 ## Reporting a bug
 
-Use the [bug report form](https://github.com/ZhFahim/anchor/issues/new?template=bug_report.yml). A good report has:
+Use the [bug report form](https://github.com/bl4ckh4nd/bordo/issues/new?template=bug_report.yml). A good report has:
 
 - **One bug per issue.**
 - **The versions** of the app and the server. Both are shown in Settings.
 - **Exact steps to reproduce**, starting from a fresh screen. A bug that can't be reproduced can't be fixed.
-- **Logs.** In the phone app open Settings, Logs, tap **•••** and choose **Save to a file**. For the server run `docker logs anchor --tail 200`. For the web app copy the errors from the browser console.
+- **Logs.** In the phone app open Settings, Logs, tap **•••** and choose **Save to a file**. For Compose services run `docker compose -f docker-compose.convex.yml --profile release logs --tail 200` with the same environment file and project name used to start them. For the web app copy the errors from the browser console.
 - **A screenshot or short recording** for anything you can see.
 
-Search the [existing issues](https://github.com/ZhFahim/anchor/issues?q=is%3Aissue) first. If one already covers your bug, add your details there instead of opening a new one.
+Search the [existing issues](https://github.com/bl4ckh4nd/bordo/issues?q=is%3Aissue) first. If one already covers your bug, add your details there instead of opening a new one.
 
 Security problems should not go in a public issue. See the [security policy](SECURITY.md).
 
 ## Suggesting a feature
 
-Use the [feature request form](https://github.com/ZhFahim/anchor/issues/new?template=feature_request.yml). Describe the problem you want solved, not only the solution. Not every idea will fit Anchor, and that is fine: a clear request still helps shape what comes next.
+Use the [feature request form](https://github.com/bl4ckh4nd/bordo/issues/new?template=feature_request.yml). Describe the problem you want solved, not only the solution. Not every idea will fit Bordo, and that is fine: a clear request still helps shape what comes next.
 
 ## Sending a pull request
 
 ### Talk first
 
-**Open an issue and wait for the maintainer to agree before you write a new feature or a large change.** Anchor has a design guide and decisions that are not all visible in the code, and a pull request that goes a different way may be closed even if the code is good. An agreed issue saves your time as well as the reviewer's.
+**Open an issue and wait for the maintainer to agree before you write a new feature or a large change.** Bordo has a design guide and decisions that are not all visible in the code, and a pull request that goes a different way may be closed even if the code is good. An agreed issue saves your time as well as the reviewer's.
 
 You don't need an issue for typos, documentation fixes or small, clear bug fixes.
 
@@ -39,7 +39,6 @@ You don't need an issue for typos, documentation fixes or small, clear bug fixes
 - One pull request does one thing. Don't mix a fix with a refactor, formatting changes or a new feature.
 - Big changes are hard to review. If a change touches many files, ask in the issue how to split it.
 - Keep to the style of the code around your change.
-- Phone app text goes in `mobile/lib/l10n/app_en.arb` with a description for translators, never as text in the code.
 
 ### Test it yourself
 
@@ -88,14 +87,17 @@ Pull requests that look like unreviewed AI output will be closed without review.
 
 | Folder | What it is | Stack |
 |--------|------------|-------|
-| `server/` | API and sync | Nest.js, PostgreSQL, Prisma |
-| `web/` | Web app | Next.js, TypeScript |
-| `mobile/` | Android and iPhone app | Flutter |
+| `convex-backend/` | API and sync | Convex, Effect, PostgreSQL |
+| `server/` | Previous backend and compatibility tests | NestJS, PostgreSQL, Prisma |
+| `web/` | Web app | TanStack Start, TypeScript |
+| `mobile-kotlin/` | Android and iPhone app | Kotlin and Compose Multiplatform |
+| `chrome-extension/` | Chrome clipper | Manifest V3 |
 | `design/` | Design tokens for the web app | W3C Design Tokens |
 
 ### Running it locally
 
-The server, web app and database run with Docker:
+For the current stack, follow the [Bordo hosting guide](../docs/hosting.md).
+The Compose development file below runs the NestJS compatibility stack:
 
 ```bash
 cp .env.example .env
@@ -104,7 +106,7 @@ docker compose -f docker-compose.dev.yml up
 
 The web app is at http://localhost:3000 and the API at http://localhost:3001. Both reload when you change a file.
 
-To run the phone app, start the server above, then run `flutter run` in `mobile/` and sign in with your computer's address on port 3000.
+Follow the [mobile setup](../mobile-kotlin/README.md) to build the app and connect it to the development server.
 
 ### Checks
 
@@ -114,9 +116,9 @@ CI runs these on every pull request. Run them for each part you changed:
 |------|----------|
 | Server | `cd server && pnpm install && pnpm exec prisma generate && pnpm check && pnpm test` |
 | Web | `cd web && pnpm install && pnpm check && pnpm test && pnpm build` |
-| Phone app | `cd mobile && flutter pub get && flutter analyze && flutter test` |
+| Phone app | `cd mobile-kotlin && bash e2e/room-upgrade-host.sh :androidApp:assembleDebug` |
 
-Fix lint and format problems with `pnpm check:fix` in `server/` or `web/`, and `dart format lib test` in `mobile/`.
+Fix lint and format problems with `pnpm check:fix` in `server/` or `web/`.
 
 ### Pre-commit hook
 
@@ -138,4 +140,4 @@ CI runs it with `--check` and fails if the built files are out of date.
 
 ## License
 
-By contributing, you agree that your contributions are licensed under the [GNU Affero General Public License v3.0](../LICENSE), the same license as Anchor.
+By contributing, you agree that your contributions are licensed under the [GNU Affero General Public License v3.0](../LICENSE), the same license as Bordo.

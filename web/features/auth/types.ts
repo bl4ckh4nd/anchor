@@ -108,6 +108,7 @@ export interface RefreshTokenResponse {
 
 export interface ApiTokenResponse {
   apiToken: string | null;
+  hasApiToken?: boolean;
 }
 
 export interface LoginCredentials {

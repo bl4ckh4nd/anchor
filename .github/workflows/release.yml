@@ -11,9 +11,14 @@ permissions:
 
 jobs:
   docker:
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [runner, convex_web]
     uses: ./.github/workflows/docker-build.yml
     with:
       push: true
+      target: ${{ matrix.target }}
       tags: |
         type=semver,pattern={{version}}
         type=semver,pattern={{major}}.{{minor}}
@@ -23,60 +28,49 @@ jobs:
 
   build-android:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     defaults:
       run:
-        working-directory: mobile
+        shell: bash
+        working-directory: mobile-kotlin
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-
-      - name: Set up Java
-        uses: actions/setup-java@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
         with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
-
-      - name: Get dependencies
-        run: flutter pub get
-
-      - name: Decode and save keystore
+          distribution: temurin
+          java-version: '25'
+          cache: gradle
+      - run: sdkmanager 'platforms;android-37.0' 'build-tools;37.0.0'
+      - name: Build and verify the signed Compose APKs
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANCHOR_ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANCHOR_ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANCHOR_ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/upload-keystore.jks
-
-      - name: Create key.properties
-        run: |
-          cat > android/key.properties << EOF
-          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
-          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
-          storeFile=./upload-keystore.jks
-          EOF
-
-      - name: Build universal APK
-        run: flutter build apk --release
-
-      - name: Build split APKs
-        run: flutter build apk --release --split-per-abi
-
-      - name: Rename APKs
-        run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
-          mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/anchor-${VERSION}.apk
-          mv build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk build/app/outputs/flutter-apk/anchor-${VERSION}-armeabi-v7a.apk
-          mv build/app/outputs/flutter-apk/app-arm64-v8a-release.apk build/app/outputs/flutter-apk/anchor-${VERSION}-arm64-v8a.apk
-          mv build/app/outputs/flutter-apk/app-x86_64-release.apk build/app/outputs/flutter-apk/anchor-${VERSION}-x86_64.apk
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v7
+          test -n "$ANDROID_KEYSTORE_BASE64"
+          test -n "$ANCHOR_ANDROID_STORE_PASSWORD"
+          test -n "$ANCHOR_ANDROID_KEY_PASSWORD"
+          test -n "$ANCHOR_ANDROID_KEY_ALIAS"
+          umask 077
+          export ANCHOR_ANDROID_KEYSTORE="$(mktemp)"
+          trap 'rm -f -- "$ANCHOR_ANDROID_KEYSTORE"' EXIT
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$ANCHOR_ANDROID_KEYSTORE"
+          unset ANDROID_KEYSTORE_BASE64
+          version="${GITHUB_REF_NAME#v}"
+          ./gradlew :androidApp:assembleRelease -PanchorSplitApks "-PanchorVersion=$version"
+          mkdir release-apks
+          for abi in universal armeabi-v7a arm64-v8a x86_64; do
+            apk="androidApp/build/outputs/apk/release/androidApp-$abi-release.apk"
+            "$ANDROID_HOME/build-tools/37.0.0/apksigner" verify "$apk"
+            suffix="-$abi"
+            if [[ "$abi" == universal ]]; then suffix=; fi
+            cp "$apk" "release-apks/anchor-$version$suffix.apk"
+          done
+      - uses: actions/upload-artifact@v7
         with:
           name: android-apk
-          path: mobile/build/app/outputs/flutter-apk/anchor-*.apk
+          path: mobile-kotlin/release-apks/anchor-*.apk
 
   create-release:
     runs-on: ubuntu-latest

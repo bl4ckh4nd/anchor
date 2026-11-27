@@ -1,6 +1,6 @@
 <!--
 Thanks for contributing. Please read the contributing guide first:
-https://github.com/ZhFahim/anchor/blob/main/.github/CONTRIBUTING.md
+https://github.com/bl4ckh4nd/bordo/blob/main/.github/CONTRIBUTING.md
 
 New features and large changes need an agreed issue before a pull request.
 Pull requests without one may be closed without review.

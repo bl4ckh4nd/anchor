@@ -1,0 +1,7 @@
+<!-- Generated from design/tokens by design/build/build.mjs. Do not edit by hand. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="40dp" android:height="40dp"
+    android:viewportWidth="40" android:viewportHeight="40">
+    <path android:pathData="M0 20Q10 10 20 20T40 20"
+        android:strokeColor="#FFFFFF" android:strokeWidth="2"/>
+</vector>

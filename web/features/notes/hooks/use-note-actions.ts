@@ -1,10 +1,10 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "@/components/ui/toast";
 import { canGoBackInApp } from "@/lib/app-history";
+import { useRouter } from "@/lib/app-router";
 import {
   archiveNote,
   deleteNote,

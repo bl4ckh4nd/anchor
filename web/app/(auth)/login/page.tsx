@@ -2,8 +2,6 @@
 
 import { HTTPError } from "ky";
 import { ArrowLeft, KeyRound, LoaderCircle } from "lucide-react";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
@@ -35,6 +33,7 @@ import {
   serverSignInError,
   signInError,
 } from "@/features/auth/utils/sign-in-error";
+import { Link, useSearchParams } from "@/lib/app-router";
 
 /** After the password: a code to enter, a second step to set up, or neither. */
 type Step =
@@ -167,7 +166,7 @@ export default function LoginPage() {
 
   return (
     <>
-      <AuthHeading title="Welcome back" sub="Sign in to continue to Anchor." />
+      <AuthHeading title="Welcome back" sub="Sign in to continue to Bordo." />
       {oidc.data?.enabled && (
         <>
           <Button

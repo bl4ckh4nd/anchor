@@ -5,6 +5,7 @@ import {
   Patch,
   Delete,
   Body,
+  Header,
   HttpCode,
   HttpStatus,
   UseGuards,
@@ -24,6 +25,7 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { LogoutDto } from './dto/logout.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { issueConvexToken } from './convex-token';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { PROFILE_IMAGE_MAX_BYTES } from './constants/auth.constants';
 import type { User } from 'src/generated/prisma/client';
@@ -64,6 +66,14 @@ export class AuthController {
   @Get('me')
   getMe(@CurrentUser() user: User) {
     return this.authService.getMe(user);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @Header('Cache-Control', 'no-store')
+  @Post('convex-token')
+  getConvexToken(@CurrentUser() user: User) {
+    return { token: issueConvexToken(user.id) };
   }
 
   @UseGuards(JwtAuthGuard)

@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "react-quill-new/dist/quill.snow.css";
 @import "./styles/tokens.css";
+@import "./styles/fonts.css";
 @import "./styles/notes.css";
 @import "./styles/base.css";
 @import "./styles/motion.css";

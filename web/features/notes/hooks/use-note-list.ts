@@ -1,6 +1,5 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
 import * as React from "react";
 import {
   type SortBy,
@@ -10,6 +9,7 @@ import {
 } from "@/features/preferences";
 import { useTagMap } from "@/features/tags/hooks";
 import type { TagLabel } from "@/features/tags/types";
+import { useRouter, useSearchParams } from "@/lib/app-router";
 import { useFlip } from "@/lib/use-flip";
 import { deltaToFullPlainText } from "../quill";
 import { compareNotes } from "../sort";
@@ -70,6 +70,7 @@ export function useNoteList(
   const searchRef = React.useRef<HTMLInputElement>(null);
   const flip = useFlip(boardRef);
   const tagMap = useTagMap();
+  const router = useRouter();
   const urlQuery = useSearchParams().get(QUERY_PARAM) ?? "";
   const [query, setQueryValue] = React.useState(urlQuery);
   const queryInUrl = React.useRef(urlQuery);
@@ -114,17 +115,16 @@ export function useNoteList(
     shownRef.current = shown;
   });
 
-  const writeQueryToUrl = React.useCallback((value: string) => {
-    clearTimeout(urlUpdate.current);
-    if (value === queryInUrl.current) return;
-    queryInUrl.current = value;
-    const { pathname, search } = window.location;
-    window.history.replaceState(
-      null,
-      "",
-      urlWithQuery(pathname, search, value),
-    );
-  }, []);
+  const writeQueryToUrl = React.useCallback(
+    (value: string) => {
+      clearTimeout(urlUpdate.current);
+      if (value === queryInUrl.current) return;
+      queryInUrl.current = value;
+      const { pathname, search } = window.location;
+      void router.replace(urlWithQuery(pathname, search, value), false);
+    },
+    [router],
+  );
 
   React.useEffect(() => {
     if (urlQuery === queryInUrl.current) return;

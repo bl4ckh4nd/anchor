@@ -6,9 +6,12 @@ Security fixes go into the latest release. Please update to it before you report
 
 ## Reporting a problem
 
-**Please don't report security problems in a public issue, on Discord or in a pull request.**
+Send security reports privately to a Bordo maintainer.
 
-Report them privately on GitHub instead: open the [Security tab](https://github.com/ZhFahim/anchor/security) and choose **Report a vulnerability**.
+Open the [Bordo Security tab](https://github.com/bl4ckh4nd/bordo/security) for
+the available reporting options. If private reporting is unavailable, ask a
+maintainer for a private contact channel and keep the technical details
+for that conversation.
 
 Please include:
 

@@ -11,3 +11,11 @@ thumbs.db
 .idea/
 *.swp
 *.swo
+
+# Local Convex credentials
+/.env.convex*.local
+
+# Local handoff and browser artifacts
+/HANDOFF.md
+/.playwright-cli/
+__pycache__/

@@ -35,10 +35,10 @@ export default function SettingsPage() {
           <Section id="about" title="About">
             <Row>
               <div className="flex items-center gap-3">
-                <AnchorLogo className="size-10 rounded-md shadow-edge" />
+                <AnchorLogo className="size-10" />
                 <div className="grid">
                   <b className="font-semibold text-ui">
-                    Anchor {process.env.NEXT_PUBLIC_APP_VERSION}
+                    Bordo {import.meta.env.VITE_APP_VERSION}
                   </b>
                   <span className="text-meta text-muted-foreground">
                     Your thoughts, secured.

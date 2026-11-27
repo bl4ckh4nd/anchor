@@ -2,8 +2,6 @@
 
 import { HTTPError } from "ky";
 import { ArrowLeft, KeyRound } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
@@ -28,6 +26,7 @@ import {
   OrDivider,
   PendingApprovalScreen,
 } from "@/features/auth/components/auth-parts";
+import { Link, useRouter } from "@/lib/app-router";
 
 type Errors = {
   name?: string;

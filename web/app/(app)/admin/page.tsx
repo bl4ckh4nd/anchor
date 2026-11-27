@@ -44,7 +44,7 @@ function AdminPageContent() {
       title={<PageTitle>Admin</PageTitle>}
       actions={
         <span className="text-meta text-muted-foreground tabular-nums">
-          Anchor {process.env.NEXT_PUBLIC_APP_VERSION}
+          Anchor {import.meta.env.VITE_APP_VERSION}
         </span>
       }
       scrollKey="admin"

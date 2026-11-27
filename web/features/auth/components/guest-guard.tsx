@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { type ReactNode, useEffect } from "react";
+import { useRouter } from "@/lib/app-router";
 import { useCapabilities, useRegistrationMode } from "../hooks/use-auth";
 import { useOidcConfig } from "../hooks/use-oidc";
 import { useAuthStore } from "../store";

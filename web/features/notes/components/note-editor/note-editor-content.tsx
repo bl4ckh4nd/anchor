@@ -10,7 +10,6 @@ import {
   Plus,
   Repeat,
 } from "lucide-react";
-import { useSearchParams } from "next/navigation";
 import type { RefObject } from "react";
 import * as React from "react";
 import { createPortal } from "react-dom";
@@ -29,6 +28,7 @@ import {
   TagPicker,
   useTagOrder,
 } from "@/features/tags";
+import { useSearchParams } from "@/lib/app-router";
 import { useRovingFocus } from "@/lib/hooks/use-roving-focus";
 import { useFlip } from "@/lib/use-flip";
 import { cn } from "@/lib/utils";

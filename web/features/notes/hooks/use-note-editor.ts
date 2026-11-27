@@ -1,10 +1,10 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "@/components/ui/toast";
 import { useSyncStatus } from "@/features/sync";
+import { useRouter, useSearchParams } from "@/lib/app-router";
 import { newId } from "@/lib/id";
 import {
   createNote,
@@ -84,6 +84,7 @@ export function useNoteEditor({
   onOpenHistory: () => void;
 }) {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const refreshLists = useRefreshNotes();
   const [createdId, setCreatedId] = useState<string | null>(null);
@@ -424,7 +425,7 @@ export function useNoteEditor({
       setLastSaved(noteToDraft(newNote));
       setCreatedId(newNote.id);
       onCreated(newNote.id);
-      window.history.replaceState(null, "", `/notes/${newNote.id}`);
+      void router.replace(`/notes/${newNote.id}`);
     },
     onError: (error) => {
       if (isRetryableError(error)) {

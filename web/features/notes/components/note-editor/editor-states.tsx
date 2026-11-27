@@ -1,9 +1,9 @@
 import { ArrowLeft, RotateCw, Trash2 } from "lucide-react";
-import Link from "next/link";
 import { AppPage } from "@/components/layout/app-page";
 import { ErrorScreen } from "@/components/layout/error-screen";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Link } from "@/lib/app-router";
 
 export function EditorSkeleton() {
   return (

@@ -1,7 +1,7 @@
 "use client";
 
-import { usePathname, useSearchParams } from "next/navigation";
 import * as React from "react";
+import { usePathname, useSearchParams } from "@/lib/app-router";
 import { capturePage, type PageSnapshot, playPageChange } from "@/lib/morph";
 
 interface PageSwapProps {

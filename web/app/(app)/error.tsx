@@ -22,22 +22,22 @@ export default function AppError({
   error,
   reset,
 }: {
-  error: Error & { digest?: string };
+  error: unknown;
   reset: () => void;
 }) {
-  const id = React.useMemo(() => shortId(error.digest), [error.digest]);
+  const [id] = React.useState(() => shortId());
   React.useEffect(() => console.error(error), [error]);
 
   const details = () =>
     [
-      `Anchor ${process.env.NEXT_PUBLIC_APP_VERSION}`,
+      `Anchor ${import.meta.env.VITE_APP_VERSION}`,
       `Error ${id}`,
       window.location.pathname,
       new Date().toLocaleString("en-US", {
         dateStyle: "medium",
         timeStyle: "short",
       }),
-      error.message,
+      error instanceof Error ? error.message : String(error),
     ].join(" · ");
 
   return (

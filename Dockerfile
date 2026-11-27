@@ -4,7 +4,7 @@ FROM node:26-alpine AS base
 COPY --from=ghcr.io/pnpm/pnpm:12.16.1-alpine /opt/pnpm /opt/pnpm
 RUN for bin in pnpm pn pnpx pnx; do ln -s "/opt/pnpm/$bin" "/usr/local/bin/$bin"; done
 
-# Next.js on Alpine can need libc compatibility
+# Native packages can need libc compatibility
 RUN apk add --no-cache libc6-compat
 
 #
@@ -38,16 +38,34 @@ RUN if [ -d src/generated ]; then mkdir -p dist/src && cp -R src/generated dist/
 FROM base AS web_deps
 WORKDIR /app/web
 COPY web/package.json web/pnpm-lock.yaml web/pnpm-workspace.yaml ./
+COPY web/vendor/ ./vendor/
 RUN pnpm install --frozen-lockfile
+
+FROM web_deps AS web_prod_deps
+RUN pnpm install --prod --frozen-lockfile
 
 FROM base AS web_builder
 WORKDIR /app/web
 COPY --from=web_deps /app/web/node_modules ./node_modules
 COPY web/ ./
 
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV SERVER_URL=http://127.0.0.1:3001
 RUN pnpm build
+
+#
+# TanStack Start frontend for the Convex deployment
+#
+FROM base AS convex_web
+WORKDIR /app
+ARG SERVER_URL=http://convex:3211
+ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0 SERVER_URL=$SERVER_URL
+
+COPY --from=web_builder --chown=node:node /app/web/dist ./dist
+COPY --from=web_builder --chown=node:node /app/web/start/serve.mjs ./start/serve.mjs
+COPY --from=web_prod_deps --chown=node:node /app/web/node_modules ./node_modules
+
+USER node
+EXPOSE 3000
+CMD ["node", "start/serve.mjs"]
 
 #
 # Runtime image (single container: postgres + api + web)
@@ -56,7 +74,6 @@ FROM postgres:18-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
 ENV PGDATA=/data/postgres
 
 # Bring Node runtime into the postgres image (same Alpine/musl family).
@@ -73,10 +90,10 @@ COPY --from=server_builder /app/server/prisma ./server/prisma
 COPY --from=server_builder /app/server/package.json ./server/package.json
 COPY --from=server_builder /app/server/prisma.config.ts ./server/prisma.config.ts
 
-# Web runtime files (Next standalone output)
-COPY --from=web_builder /app/web/.next/standalone ./web
-COPY --from=web_builder /app/web/.next/static ./web/.next/static
-COPY --from=web_builder /app/web/public ./web/public
+# Web runtime files
+COPY --from=web_builder /app/web/dist ./web/dist
+COPY --from=web_builder /app/web/start/serve.mjs ./web/start/serve.mjs
+COPY --from=web_prod_deps /app/web/node_modules ./web/node_modules
 
 COPY docker/docker-entrypoint.sh /app/docker-entrypoint.sh
 COPY docker/supervisord.conf /etc/supervisord.conf
@@ -86,7 +103,7 @@ VOLUME ["/data"]
 
 EXPOSE 3000
 
-# Validates both web and API routing via Next rewrite (/api/*)
+# Validates both web and API routing through the web API proxy (/api/*)
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=30s \
   CMD curl -f http://localhost:3000/api/health || exit 1
 

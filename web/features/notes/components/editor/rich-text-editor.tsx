@@ -1,11 +1,13 @@
 "use client";
 
+import { ClientOnly } from "@tanstack/react-router";
 import { ChevronDown, GripVertical, Plus } from "lucide-react";
-import dynamic from "next/dynamic";
 import Delta from "quill-delta";
 import {
   Fragment,
   forwardRef,
+  lazy,
+  Suspense,
   useCallback,
   useEffect,
   useImperativeHandle,
@@ -13,6 +15,7 @@ import {
   useRef,
   useState,
 } from "react";
+import type ReactQuillInstance from "react-quill-new";
 import { StatusRing } from "@/components/ui/status-ring";
 import { toast } from "@/components/ui/toast";
 import { usePreferencesStore } from "@/features/preferences";
@@ -63,17 +66,15 @@ import { useCodeIndents } from "./use-code-indents";
 import { type FirstLineHandlers, useFirstLine } from "./use-first-line";
 
 // Our formats must be registered before any note opens.
-// biome-ignore lint/suspicious/noExplicitAny: react-quill-new's dynamic() wrapper drops the ref types
-const ReactQuill: any = dynamic(
-  async () => {
-    const quillModule = await import("react-quill-new");
-    registerNoteFormats(
-      quillModule.Quill as unknown as Parameters<typeof registerNoteFormats>[0],
-    );
-    return quillModule.default;
-  },
-  { ssr: false },
-);
+const ReactQuill = lazy(async () => {
+  const quillModule = await import("react-quill-new");
+  registerNoteFormats(
+    quillModule.Quill as unknown as Parameters<typeof registerNoteFormats>[0],
+  );
+  return { default: quillModule.default };
+});
+
+const formats = [...QUILL_FORMATS];
 
 const LONG_NOTE_LINES = 3000;
 
@@ -190,7 +191,7 @@ export const RichTextEditor = forwardRef<
     },
     ref,
   ) => {
-    const quillRef = useRef<{ getEditor: () => QuillInstance }>(null);
+    const quillRef = useRef<ReactQuillInstance>(null);
     const rootRef = useRef<HTMLDivElement>(null);
     const [editorContainerEl, setEditorContainerEl] =
       useState<HTMLDivElement | null>(null);
@@ -211,26 +212,30 @@ export const RichTextEditor = forwardRef<
       editingRange: null,
       anchor: null,
     });
-    const rectOf = useCallback((index: number, length: number) => {
-      const quill = quillRef.current?.getEditor?.() as QuillInstance | null;
-      const bounds = quill?.getBounds(index, length);
-      if (!quill || !bounds) return null;
-      const editorBox = quill.container.getBoundingClientRect();
-      return new DOMRect(
-        editorBox.left + bounds.left,
-        editorBox.top + bounds.top,
-        bounds.width,
-        bounds.height,
-      );
-    }, []);
+    // The custom registered formats extend Quill's public types.
+    const getQuill = useCallback(
+      () => (quillRef.current?.getEditor() as unknown as QuillInstance) ?? null,
+      [],
+    );
+    const rectOf = useCallback(
+      (index: number, length: number) => {
+        const quill = getQuill();
+        const bounds = quill?.getBounds(index, length);
+        if (!quill || !bounds) return null;
+        const editorBox = quill.container.getBoundingClientRect();
+        return new DOMRect(
+          editorBox.left + bounds.left,
+          editorBox.top + bounds.top,
+          bounds.width,
+          bounds.height,
+        );
+      },
+      [getQuill],
+    );
     const sortChecklistItems = usePreferencesStore(
       (state) => state.editor.sortChecklistItems,
     );
 
-    const getQuill = useCallback(
-      () => (quillRef.current?.getEditor?.() as QuillInstance | null) ?? null,
-      [],
-    );
     const checklistDrag = useChecklistDrag({
       containerEl: editorContainerEl,
       getQuill,
@@ -348,19 +353,16 @@ export const RichTextEditor = forwardRef<
         isCancelled = true;
       };
     }, [longContent, getQuill]);
-    const handleChange = useCallback(
-      (
-        _html: string,
-        changeDelta: unknown,
-        source: "user" | "api" | "silent" | string,
-        editor: QuillInstance,
-      ) => {
+    const handleChange = useCallback<
+      NonNullable<ReactQuillInstance["props"]["onChange"]>
+    >(
+      (_html, changeDelta, source, editor) => {
         checkedFolds.refresh();
-        const currentDelta = editor.getContents() as QuillDelta;
+        const currentDelta = editor.getContents() as unknown as QuillDelta;
         const before = previousContents.current;
         previousContents.current = currentDelta;
         setEditorValue(currentDelta);
-        checklistEdits.follow(changeDelta as QuillDelta);
+        checklistEdits.follow(changeDelta as unknown as QuillDelta);
 
         // Ignore non-user changes (hydration, API updates)
         if (source !== "user" || readOnly) return;
@@ -375,10 +377,13 @@ export const RichTextEditor = forwardRef<
           !checklistSort.isSorting() &&
           !checklistEdits.isApplying()
         ) {
-          checklistSort.noteChange(changeDelta as QuillDelta, before);
+          checklistSort.noteChange(
+            changeDelta as unknown as QuillDelta,
+            before,
+          );
           queueMicrotask(() => {
-            startTypedBlock(quill, changeDelta as QuillDelta);
-            linkTypedAddress(quill, changeDelta as QuillDelta);
+            startTypedBlock(quill, changeDelta as unknown as QuillDelta);
+            linkTypedAddress(quill, changeDelta as unknown as QuillDelta);
           });
         }
         onChange(currentStr);
@@ -425,7 +430,7 @@ export const RichTextEditor = forwardRef<
           !/^(Arrow|Home$|End$|Page)/.test(e.key)
         )
           return;
-        const quill = quillRef.current?.getEditor?.() as QuillInstance | null;
+        const quill = getQuill();
         if (quill?.root.contains(e.target as Node)) dropPendingFormat(quill);
       };
       el.addEventListener("keydown", beforeSelecting, true);
@@ -434,7 +439,7 @@ export const RichTextEditor = forwardRef<
         el.removeEventListener("keydown", beforeSelecting, true);
         el.removeEventListener("mousedown", beforeSelecting, true);
       };
-    }, [editorContainerEl, readOnly]);
+    }, [editorContainerEl, readOnly, getQuill]);
 
     // Ahead of Quill's Backspace bindings.
     useEffect(() => {
@@ -566,7 +571,7 @@ export const RichTextEditor = forwardRef<
     }, []);
 
     const openLinkDialog = useCallback(() => {
-      const quill = quillRef.current?.getEditor?.() as QuillInstance | null;
+      const quill = getQuill();
       if (!quill) return;
       const sel = quill.getSelection(true);
       if (sel && isInCodeBlock(quill, sel)) return;
@@ -594,7 +599,7 @@ export const RichTextEditor = forwardRef<
           anchor: sel ? rectOf(sel.index, sel.length) : null,
         }));
       }
-    }, [rectOf]);
+    }, [rectOf, getQuill]);
 
     useEffect(() => {
       const el = editorContainerEl;
@@ -632,15 +637,18 @@ export const RichTextEditor = forwardRef<
       [rectOf],
     );
 
-    const removeLinkRange = useCallback((link: LinkRange) => {
-      const quill = quillRef.current?.getEditor?.() as QuillInstance | null;
-      if (!quill) return;
-      quill.formatText(link.start, link.length, "link", false, "user");
-    }, []);
+    const removeLinkRange = useCallback(
+      (link: LinkRange) => {
+        const quill = getQuill();
+        if (!quill) return;
+        quill.formatText(link.start, link.length, "link", false, "user");
+      },
+      [getQuill],
+    );
 
     const handleLinkSubmit = useCallback(
       (text: string, url: string) => {
-        const quill = quillRef.current?.getEditor?.() as QuillInstance | null;
+        const quill = getQuill();
         if (!quill) return;
         const editingRange = linkDialogState.editingRange;
 
@@ -680,17 +688,17 @@ export const RichTextEditor = forwardRef<
 
         setLinkDialogState((s) => ({ ...s, open: false }));
       },
-      [linkDialogState.editingRange],
+      [linkDialogState.editingRange, getQuill],
     );
 
     const handleLinkRemove = useCallback(() => {
-      const quill = quillRef.current?.getEditor?.() as QuillInstance | null;
+      const quill = getQuill();
       const range = linkDialogState.editingRange;
       if (!quill || !range) return;
       quill.formatText(range.start, range.length, "link", false, "user");
       setLinkDialogState((s) => ({ ...s, open: false }));
       quill.setSelection(range.start + range.length, 0, "user");
-    }, [linkDialogState.editingRange]);
+    }, [linkDialogState.editingRange, getQuill]);
     const handleFocus = useCallback(() => {
       if (readOnly) return;
       setIsFocused(true);
@@ -704,14 +712,14 @@ export const RichTextEditor = forwardRef<
       () => ({
         setSelection: (index: number, length: number) => {
           if (readOnly) return;
-          const quill = quillRef.current?.getEditor?.() as QuillInstance | null;
+          const quill = getQuill();
           if (!quill) return;
           quill.setSelection(index, length, "user");
           setIsFocused(true);
         },
         focusEnd: (extend: boolean) => {
           if (readOnly) return false;
-          const quill = quillRef.current?.getEditor?.() as QuillInstance | null;
+          const quill = getQuill();
           if (!quill) return false;
           const end = quill.getLength() - 1;
           const from = extend ? (quill.getSelection()?.index ?? end) : end;
@@ -721,7 +729,7 @@ export const RichTextEditor = forwardRef<
         },
         startList: (kind: "unchecked" | "bullet") => {
           if (readOnly) return;
-          const quill = quillRef.current?.getEditor?.() as QuillInstance | null;
+          const quill = getQuill();
           if (!quill) return;
           quill.focus();
           quill.getSelection(true);
@@ -829,7 +837,7 @@ export const RichTextEditor = forwardRef<
       const handler = (e: ClipboardEvent) => {
         const raw = e.clipboardData?.getData("text/plain")?.trim() ?? "";
         if (!isFullUrl(raw)) return;
-        const quill = quillRef.current?.getEditor?.() as QuillInstance | null;
+        const quill = getQuill();
         if (!quill) return;
         const sel = quill.getSelection(true);
         if (!sel || quill.getFormat(sel.index)["code-block"]) return;
@@ -839,7 +847,7 @@ export const RichTextEditor = forwardRef<
       };
       el.addEventListener("paste", handler, { capture: true });
       return () => el.removeEventListener("paste", handler, { capture: true });
-    }, [editorContainerEl, readOnly]);
+    }, [editorContainerEl, readOnly, getQuill]);
 
     // Quill only hears the undo shortcut when the editor is focused;
     // checkbox clicks and handle drags never focus it.
@@ -894,20 +902,24 @@ export const RichTextEditor = forwardRef<
               Loading the note…
             </p>
           )}
-          <ReactQuill
-            ref={quillRef}
-            theme="snow"
-            value={editorValue}
-            onChange={handleChange}
-            onChangeSelection={handleSelectionChange}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
-            modules={QUILL_MODULES}
-            formats={QUILL_FORMATS}
-            placeholder={placeholder}
-            readOnly={readOnly || !!longContent}
-            useSemanticHTML={false}
-          />
+          <ClientOnly>
+            <Suspense fallback={null}>
+              <ReactQuill
+                ref={quillRef}
+                theme="snow"
+                value={new Delta(editorValue.ops as Delta["ops"])}
+                onChange={handleChange}
+                onChangeSelection={handleSelectionChange}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+                modules={QUILL_MODULES}
+                formats={formats}
+                placeholder={placeholder}
+                readOnly={readOnly || !!longContent}
+                useSemanticHTML={false}
+              />
+            </Suspense>
+          </ClientOnly>
           {!readOnly && checklistDrag.handle && !checklistDrag.drag && (
             <button
               type="button"

@@ -9,11 +9,11 @@ export function SplashScreen({ checking }: { checking: boolean }) {
   return (
     <div
       role="status"
-      aria-label="Loading Anchor"
+      aria-label="Loading Bordo"
       className="grid min-h-dvh place-items-center bg-background"
     >
       <div className="relative grid place-items-center">
-        <AnchorLogo className="size-11 rounded-[11px] shadow-sm animate-splash" />
+        <AnchorLogo className="size-11 animate-splash" />
         {isSlow && (
           <p className="absolute top-full m-0 mt-5 inline-flex animate-fade-in items-center gap-2 whitespace-nowrap text-meta text-muted-foreground">
             <StatusRing turning />

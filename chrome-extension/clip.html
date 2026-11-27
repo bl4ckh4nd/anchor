@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bordo for Chrome</title>
+  <link rel="stylesheet" href="clip.css">
+  <script src="clip.js" type="module"></script>
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><img src="icons/bordo-mark-32.png" width="22" height="22" alt=""><strong>Bordo</strong></div>
+    <span id="heading"></span>
+    <div class="header-actions">
+      <button id="panel" class="icon" aria-label="Open side panel" title="Open side panel"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg></button>
+      <button id="settings" class="icon" aria-label="Account and access" title="Account and access"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+    </div>
+  </header>
+  <main>
+    <p id="status" class="notice error" role="alert" hidden></p>
+    <section id="connect" hidden>
+      <h1>Connect to your Bordo server</h1>
+      <p class="muted">Save pages, selected text and images to your notes.</p>
+      <form id="connection-form">
+        <label for="server">Server address</label>
+        <input id="server" type="text" required spellcheck="false" autocomplete="url" placeholder="notes.example.org">
+        <button class="primary" id="sign-in">Continue</button>
+      </form>
+      <p class="notice">Bordo reads a page when you open the extension or use its right-click menu. Nothing is sent until you save.</p>
+      <details id="token-options">
+        <summary>Connect with an API token</summary>
+        <form id="token-form">
+          <p class="muted">Use an API token from your Bordo account settings.</p>
+          <button type="button" class="quiet" id="web-settings">Open Bordo settings</button>
+          <label for="token">API token</label>
+          <input id="token" type="password" autocomplete="off" required>
+          <button class="primary">Connect</button>
+        </form>
+      </details>
+    </section>
+    <section id="editor" hidden>
+      <div id="panel-intro" hidden>
+        <h1>Collect clips</h1>
+        <p class="muted">Use the right-click menu on any page to add more clips to this note.</p>
+        <button class="quiet" id="add-page">Add current page</button>
+      </div>
+      <p id="restrict" class="notice" hidden>Chrome limits what Bordo can read on this page. You can still write a note or add a link.</p>
+      <p id="partial" class="notice" hidden>Saving has started. Retry to finish uploading the note and its attachments.</p>
+      <button id="finish-without-images" class="quiet" hidden>Skip remaining images</button>
+      <div class="composer">
+        <input id="title" aria-label="Note title" placeholder="Untitled note" maxlength="200">
+        <div id="quotes" class="stack"></div>
+        <textarea id="text" aria-label="Note text" placeholder="Add your own words…" maxlength="50000" rows="2"></textarea>
+        <div id="images" class="stack"></div>
+        <div class="composer-tools">
+          <button type="button" class="quiet" id="attach">＋ Image</button>
+          <input id="file" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+          <button type="button" class="quiet" id="add-link">＋ Link</button>
+        </div>
+      </div>
+      <form id="link-form" hidden>
+        <label for="link-input">Web address</label>
+        <div class="inline"><input id="link-input" type="url" placeholder="https://example.org" required><button class="secondary">Add link</button></div>
+      </form>
+      <div id="fallback" class="notice" hidden>
+        <b>Couldn’t attach this image</b>
+        <p>Save its link or capture the visible part of the page.</p>
+        <div class="inline">
+          <button id="image-link" class="secondary">Save image link</button>
+          <button id="screenshot" class="secondary">Capture visible page</button>
+          <button id="dismiss-image" class="quiet">Dismiss</button>
+        </div>
+      </div>
+      <div id="sources" class="stack"></div>
+      <div class="tags">
+        <div id="applied-tags"></div>
+        <button id="add-tag" class="chip" aria-expanded="false">＋ Tag</button>
+      </div>
+      <div id="tag-picker" class="tag-picker" hidden>
+        <label for="tag-search">Find a tag</label>
+        <input id="tag-search" type="search" placeholder="Search tags" autocomplete="off">
+        <div id="tag-results" class="stack"></div>
+        <button id="create-tag" class="quiet" hidden>Create tag</button>
+      </div>
+    </section>
+    <section id="done" hidden>
+      <span class="success-mark" aria-hidden="true">✓</span>
+      <h1>Note saved</h1>
+      <p id="saved-title" class="muted"></p>
+      <button id="open-note" class="primary">Open in Bordo</button>
+      <button id="another" class="quiet">New note</button>
+    </section>
+    <section id="account" hidden>
+      <h1>Account and access</h1>
+      <p id="account-info" class="muted"></p>
+      <button id="change-server" class="secondary">Change server</button>
+      <button id="disconnect" class="quiet">Disconnect</button>
+      <p class="notice">Your unsaved note stays on this device when you disconnect.</p>
+      <button id="back" class="quiet">Back to note</button>
+    </section>
+  </main>
+  <footer id="footer" hidden>
+    <span class="muted" id="destination"></span>
+    <button class="primary" id="save">Save note <kbd id="shortcut">Ctrl ↵</kbd></button>
+  </footer>
+</body>
+</html>

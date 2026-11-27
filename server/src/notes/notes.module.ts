@@ -6,6 +6,7 @@ import { NoteSharesService } from './services/note-shares.service';
 import { NoteSharesController } from './controllers/note-shares.controller';
 import { NoteAccessService } from './services/note-access.service';
 import { NoteAttachmentsService } from './services/note-attachments.service';
+import { ConvexAttachmentsService } from './services/convex-attachments.service';
 import { NoteAttachmentsController } from './controllers/note-attachments.controller';
 import { NoteHistoryService } from './services/note-history.service';
 import { NotePositionsService } from './services/note-positions.service';
@@ -32,6 +33,7 @@ import { SyncModule } from '../sync/sync.module';
     NoteSharesService,
     NoteAccessService,
     NoteAttachmentsService,
+    ConvexAttachmentsService,
     NoteHistoryService,
     NotePositionsService,
   ],

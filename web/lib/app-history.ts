@@ -1,7 +1,7 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
+import { usePathname } from "@/lib/app-router";
 
 // For browsers without the Navigation API.
 let pagesVisited = 0;

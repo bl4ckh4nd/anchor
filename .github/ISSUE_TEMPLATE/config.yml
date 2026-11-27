@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Questions and setup help
-    url: https://discord.gg/sAfqjy8EYK
-    about: Ask on Discord for help with installing, configuring or using Anchor.
+    url: https://github.com/bl4ckh4nd/bordo/blob/main/README.md
+    about: Start with the Bordo installation and setup documentation.
   - name: Report a security problem
-    url: https://github.com/ZhFahim/anchor/security/advisories/new
+    url: https://github.com/bl4ckh4nd/bordo/security
     about: Please report security problems privately, not as a public issue.

@@ -1,0 +1,75 @@
+name: AnchorIOS
+settings:
+  base:
+    MARKETING_VERSION: "0.18.3"
+    CURRENT_PROJECT_VERSION: "28"
+    TARGETED_DEVICE_FAMILY: "1,2"
+targets:
+  AnchorIOS:
+    type: application
+    platform: iOS
+    deploymentTarget: "15.0"
+    sources: [Sources]
+    dependencies:
+      - target: AnchorShareExtension
+        embed: true
+    entitlements:
+      path: Generated/AnchorIOS.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.zhfahim.anchor]
+    info:
+      path: Generated/Info.plist
+      properties:
+        NSMicrophoneUsageDescription: Record audio to attach it to your notes.
+        NSPhotoLibraryAddUsageDescription: Save a picture from your notes to Photos.
+        CFBundleURLTypes:
+          - CFBundleURLName: com.zhfahim.anchor.compose
+            CFBundleURLSchemes: [com.zhfahim.anchor.compose]
+    settings:
+      base:
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+        FRAMEWORK_SEARCH_PATHS: "$(inherited) $(SRCROOT)/../shared/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)"
+        OTHER_LDFLAGS: "$(inherited) -framework AnchorShared"
+      configs:
+        Debug:
+          PRODUCT_BUNDLE_IDENTIFIER: com.zhfahim.anchor.compose
+        Release:
+          PRODUCT_BUNDLE_IDENTIFIER: com.zhfahim.anchor
+    preBuildScripts:
+      - name: Build Kotlin framework
+        basedOnDependencyAnalysis: false
+        script: |
+          cd "${SRCROOT}/.."
+          ./gradlew :shared:embedAndSignAppleFrameworkForXcode
+  AnchorShareExtension:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "15.0"
+    sources:
+      - path: ShareExtension
+      - path: ../assets/fonts/DMSans-Variable.ttf
+        buildPhase: resources
+    entitlements:
+      path: Generated/ShareExtension.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.zhfahim.anchor]
+    info:
+      path: Generated/ShareExtension-Info.plist
+      properties:
+        CFBundleDisplayName: Anchor Notes
+        AnchorShareNamespace: compose
+        UIAppFonts: [DMSans-Variable.ttf]
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: ShareViewController
+          NSExtensionAttributes:
+            NSExtensionActivationRule: >-
+              SUBQUERY (extensionItems, $item, SUBQUERY ($item.attachments, $attachment, ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.image" OR ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.audio" OR ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.url" OR ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.plain-text").@count == $item.attachments.@count AND $item.attachments.@count > 0).@count == extensionItems.@count
+    settings:
+      base:
+        APPLICATION_EXTENSION_API_ONLY: YES
+      configs:
+        Debug:
+          PRODUCT_BUNDLE_IDENTIFIER: com.zhfahim.anchor.compose.ShareExtension
+        Release:
+          PRODUCT_BUNDLE_IDENTIFIER: com.zhfahim.anchor.ShareExtension

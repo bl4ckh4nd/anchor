@@ -2,9 +2,9 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { HTTPError } from "ky";
-import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "@/components/ui/toast";
+import { useRouter, useSearchParams } from "@/lib/app-router";
 import { firstName } from "@/lib/utils";
 import { exchangeOidcCode, getOidcConfig } from "../api";
 import { useAuthStore } from "../store";

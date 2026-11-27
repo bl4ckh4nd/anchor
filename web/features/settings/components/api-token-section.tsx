@@ -16,6 +16,7 @@ import {
   regenerateApiToken,
   revokeApiToken,
 } from "@/features/auth/api";
+import { useAuthStore } from "@/features/auth/store";
 import { copyText } from "@/lib/clipboard";
 import { useRetry } from "@/lib/hooks/use-retry";
 import { popIconIn, revealText } from "@/lib/motion";
@@ -27,19 +28,32 @@ const maskToken = (token: string) =>
     : `${token.slice(0, 8)}${"•".repeat(16)}${token.slice(-4)}`;
 
 export function ApiTokenSection() {
+  const userId = useAuthStore((state) => state.user?.id);
+  return userId ? (
+    <AccountApiTokenSection key={userId} userId={userId} />
+  ) : null;
+}
+
+function AccountApiTokenSection({ userId }: { userId: string }) {
   const queryClient = useQueryClient();
   const generateButtonId = React.useId();
   const [shown, setShown] = React.useState(false);
+  const [freshToken, setFreshToken] = React.useState<string | null>(null);
+  const queryKey = ["api-token", userId];
   const [confirming, setConfirming] = React.useState<
     "regenerate" | "revoke" | null
   >(null);
   const tokenQuery = useQuery({
-    queryKey: ["api-token"],
+    queryKey,
     queryFn: getApiToken,
     staleTime: 5 * 60 * 1000,
   });
   const tokenRetry = useRetry(tokenQuery.refetch);
-  const token = tokenQuery.data?.apiToken ?? null;
+  const hasToken =
+    tokenQuery.data?.hasApiToken ?? Boolean(tokenQuery.data?.apiToken);
+  const token = hasToken
+    ? (freshToken ?? tokenQuery.data?.apiToken ?? null)
+    : null;
   const value = token && (shown ? token : maskToken(token));
   const tokenField = React.useRef<HTMLInputElement>(null);
   const eyeButton = React.useRef<HTMLButtonElement>(null);
@@ -62,25 +76,33 @@ export function ApiTokenSection() {
   const generate = useMutation({
     mutationFn: regenerateApiToken,
     onSuccess: (res) => {
-      queryClient.setQueryData(["api-token"], res);
+      const displayOnce = res.hasApiToken === true;
+      setFreshToken(displayOnce ? res.apiToken : null);
+      queryClient.setQueryData(
+        queryKey,
+        displayOnce ? { ...res, apiToken: null } : res,
+      );
       setShown(true);
       setConfirming(null);
       toast.success(
-        token
+        hasToken
           ? "API token regenerated. Update it in your apps."
           : "API token generated",
       );
     },
     onError: () =>
       toast.error(
-        token ? "Couldn’t regenerate the token" : "Couldn’t generate a token",
+        hasToken
+          ? "Couldn’t regenerate the token"
+          : "Couldn’t generate a token",
         { retry: () => generate.mutate() },
       ),
   });
   const revoke = useMutation({
     mutationFn: revokeApiToken,
     onSuccess: (res) => {
-      queryClient.setQueryData(["api-token"], res);
+      queryClient.setQueryData(queryKey, res);
+      setFreshToken(null);
       setShown(false);
       setConfirming(null);
       toast.success("API token revoked");
@@ -119,45 +141,59 @@ export function ApiTokenSection() {
           <Skeleton className="h-field w-full rounded-field" />
           <Skeleton className="h-3 w-2/3" />
         </Row>
-      ) : token ? (
+      ) : hasToken ? (
         <Row className="grid gap-3.5">
-          <Input
-            ref={tokenField}
-            readOnly
-            mono
-            aria-label="API token"
-            value={value ?? ""}
-            icon={<KeyRound aria-hidden />}
-            end={
-              <span className="-mr-1.5 flex gap-0.5">
-                <Tip label={shown ? "Hide token" : "Show token"}>
-                  <button
-                    ref={eyeButton}
-                    type="button"
-                    aria-label={shown ? "Hide token" : "Show token"}
-                    onClick={() => setShown((s) => !s)}
-                    className="grid size-7 cursor-pointer place-items-center rounded-sm border-0 bg-transparent text-muted-foreground hover:bg-foreground/6 hover:text-foreground [&_svg]:size-4"
-                  >
-                    {shown ? <EyeOff aria-hidden /> : <Eye aria-hidden />}
-                  </button>
-                </Tip>
-                <Tip label="Copy token">
-                  <button
-                    type="button"
-                    aria-label="Copy token"
-                    onClick={copy}
-                    className="grid size-7 cursor-pointer place-items-center rounded-sm border-0 bg-transparent text-muted-foreground hover:bg-foreground/6 hover:text-foreground [&_svg]:size-4"
-                  >
-                    <Copy aria-hidden />
-                  </button>
-                </Tip>
-              </span>
-            }
-          />
-          <FieldDescription>
-            Anyone with this token can read your notes. If it leaks, regenerate
-            it.
-          </FieldDescription>
+          {token ? (
+            <>
+              <Input
+                ref={tokenField}
+                readOnly
+                mono
+                aria-label="API token"
+                value={value ?? ""}
+                icon={<KeyRound aria-hidden />}
+                end={
+                  <span className="-mr-1.5 flex gap-0.5">
+                    <Tip label={shown ? "Hide token" : "Show token"}>
+                      <button
+                        ref={eyeButton}
+                        type="button"
+                        aria-label={shown ? "Hide token" : "Show token"}
+                        onClick={() => setShown((s) => !s)}
+                        className="grid size-7 cursor-pointer place-items-center rounded-sm border-0 bg-transparent text-muted-foreground hover:bg-foreground/6 hover:text-foreground [&_svg]:size-4"
+                      >
+                        {shown ? <EyeOff aria-hidden /> : <Eye aria-hidden />}
+                      </button>
+                    </Tip>
+                    <Tip label="Copy token">
+                      <button
+                        type="button"
+                        aria-label="Copy token"
+                        onClick={copy}
+                        className="grid size-7 cursor-pointer place-items-center rounded-sm border-0 bg-transparent text-muted-foreground hover:bg-foreground/6 hover:text-foreground [&_svg]:size-4"
+                      >
+                        <Copy aria-hidden />
+                      </button>
+                    </Tip>
+                  </span>
+                }
+              />
+              <FieldDescription>
+                Anyone with this token can read your notes. If it leaks,
+                regenerate it.
+              </FieldDescription>
+              {freshToken && (
+                <FieldDescription>
+                  Copy the token now. Anchor shows it when it is generated.
+                </FieldDescription>
+              )}
+            </>
+          ) : (
+            <RowText
+              title="Token active"
+              text="Regenerate the token if you need a new copy."
+            />
+          )}
           <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="secondary"

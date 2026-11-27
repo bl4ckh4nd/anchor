@@ -1,8 +1,8 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 import { useColumns } from "@/features/notes/hooks/use-columns";
+import { useSearchParams } from "@/lib/app-router";
 import { NotesView } from "./notes-view";
 
 /** In columns, the list stays on screen while notes open beside it. */

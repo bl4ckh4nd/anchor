@@ -1,13 +1,13 @@
 "use client";
 
 import { ArrowLeft, CircleAlert, Info } from "lucide-react";
-import Link from "next/link";
 import type * as React from "react";
 import { Button } from "@/components/ui/button";
 import {
   StateIllustration,
   type StateIllustrationKind,
 } from "@/components/ui/state-illustration";
+import { Link } from "@/lib/app-router";
 import { cn } from "@/lib/utils";
 
 export function AuthHeading({
